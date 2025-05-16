@@ -68,6 +68,7 @@ addTags(taggable, [
 - `removeTag(taggable: TagsInterface, name: string): string | null`
 
 ## Application
+
 Tag all JSON files within a directory.
 
 ```bash
