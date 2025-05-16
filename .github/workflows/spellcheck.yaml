@@ -11,3 +11,4 @@ jobs:
         with:
           # Specify the files to check
           files: "**/*.{md,html,js,ts,css}"
+          config: ".github/workflows/cspell.json"
