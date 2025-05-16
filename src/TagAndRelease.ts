@@ -32,7 +32,7 @@ export class TagAndRelease {
 
           addTag(json, key, value);
 
-          Deno.writeTextFileSync(filePath, JSON.stringify(json, null, 2));
+          Deno.writeTextFileSync(filePath, JSON.stringify(json, null, 1));
         });
       }
     }

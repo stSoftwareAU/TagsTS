@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.212.0/assert/mod.ts";
+import { assertEquals } from "@std/assert";
 import { TagAndRelease } from "../src/TagAndRelease.ts";
 import { getTag } from "../src/TagsInterface.ts";
 
