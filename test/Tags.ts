@@ -1,3 +1,4 @@
+import { assert, assertEquals } from "@std/assert";
 import {
   addTag,
   addTags,
@@ -6,10 +7,6 @@ import {
   type TagsInterface,
 } from "../src/TagsInterface.ts";
 
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.212.0/assert/mod.ts";
 ((globalThis as unknown) as { DEBUG: boolean }).DEBUG = true;
 
 Deno.test("tag", () => {

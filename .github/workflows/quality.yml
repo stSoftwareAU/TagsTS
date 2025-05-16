@@ -29,13 +29,11 @@ jobs:
         run: deno fmt
 
       - name: Lint Code
-        run: deno lint --fix src test bench mod.ts
+        run: deno lint --fix
 
       - name: Check
         run: |
-          find src -name "*.ts" -print0 | xargs -0 -n 50 deno check
-          find test -name "*.ts" -print0 | xargs -0 -n 50 deno check
-          # find bench -name "*.ts" -print0 | xargs -0 -n 50 deno check
+          deno check
 
       - name: Test
         run: deno test --allow-all test/*.ts
