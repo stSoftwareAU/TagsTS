@@ -31,7 +31,6 @@ export { TagAndRelease } from "./src/TagAndRelease.ts";
 /**
  * Interface defining the structure of a tag.
  *
- * @typedef {Object} TagInterface
  * @property {string} name - The name of the tag.
  * @property {string} value - The value of the tag.
  */
@@ -51,7 +50,12 @@ export { addTag, addTags, getTag, removeTag } from "./src/TagsInterface.ts";
 /**
  * Interface defining an entity that can have tags.
  *
- * @typedef {Object} TagsInterface
  * @property {TagInterface[]} [tags] - Array of tags associated with the entity.
  */
 export type { TagsInterface } from "./src/TagsInterface.ts";
+
+import { main } from "./App.ts"; // Application mode
+
+if (import.meta.main) {
+  main(); // Run as CLI
+}
