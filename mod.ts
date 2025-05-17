@@ -53,9 +53,3 @@ export { addTag, addTags, getTag, removeTag } from "./src/TagsInterface.ts";
  * @property {TagInterface[]} [tags] - Array of tags associated with the entity.
  */
 export type { TagsInterface } from "./src/TagsInterface.ts";
-
-import { main } from "./App.ts"; // Application mode
-
-if (import.meta.main) {
-  main(); // Run as CLI
-}
