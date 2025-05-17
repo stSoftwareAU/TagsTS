@@ -72,11 +72,8 @@ addTags(taggable, [
 Tag all JSON files within a directory.
 
 ```bash
-deno run \
-  --allow-read --allow-write \
-  https://jsr.io/@stsoftware/tags/App.ts \
-   --directory=.creatures \
-   --tagList="TEAM_HOST=${HOST}"
+#!/bin/bash
+deno run --allow-read --allow-write jsr:@stsoftware/tags --directory=.creatures --tagList=ABC=XYZ,HELLO=World
 ```
 
 ## License
