@@ -3,7 +3,7 @@
   "version": "1.0.13",
   "exports": {
     "./mod": "./mod.ts",
-    "./App": "./App.ts"  
+    "./App": "./App.ts"
   },
   "lock": false,
   "imports": {
