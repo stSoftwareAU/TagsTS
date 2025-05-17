@@ -1,7 +1,10 @@
 {
   "name": "@stsoftware/tags",
-  "version": "1.0.12",
-  "exports": "./mod.ts",
+  "version": "1.0.13",
+  "exports": {
+    "./mod": "./mod.ts",
+    "./App": "./App.ts"  
+  },
   "lock": false,
   "imports": {
     "@std/assert": "jsr:@std/assert@1.0.13",

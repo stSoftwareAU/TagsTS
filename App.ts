@@ -21,4 +21,7 @@ export function main() {
     tagList: args.tagList,
   });
 }
-main();
+
+if (import.meta.main) {
+  main();
+}
