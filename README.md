@@ -73,7 +73,10 @@ Tag all JSON files within a directory.
 
 ```bash
 #!/bin/bash
-deno run --allow-read --allow-write jsr:@stsoftware/tags --directory=.creatures --tagList=ABC=XYZ,HELLO=World
+deno run --allow-read --allow-write \
+  jsr:@stsoftware/tags \
+  --directory=.creatures \
+  --tagList=ABC=XYZ,HELLO=World
 ```
 
 ## License
