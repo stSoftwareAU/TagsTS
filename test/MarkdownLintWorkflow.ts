@@ -1,7 +1,7 @@
 // Verifies the Markdown Lint GitHub Actions workflow file exists and is
 // well-formed YAML. Tracked in issue #19.
 import { assert, assertEquals } from "@std/assert";
-import { parse } from "jsr:@std/yaml@1";
+import { parse } from "@std/yaml";
 
 const WORKFLOW_PATH = ".github/workflows/markdown-lint.yml";
 
