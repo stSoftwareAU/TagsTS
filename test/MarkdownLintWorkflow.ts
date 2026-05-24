@@ -33,3 +33,39 @@ Deno.test("markdown-lint workflow parses as YAML and defines markdownlint job", 
     "workflow must invoke markdownlint-cli2",
   );
 });
+
+// Issue #27: GitHub deprecated Node.js 20 actions. The workflow must pin
+// to action versions that ship with the Node 24 runtime.
+Deno.test("markdown-lint workflow does not use deprecated Node 20 action SHAs", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+
+  // actions/checkout v4 — Node 20
+  assert(
+    !text.includes("34e114876b0b11c390a56381ad16ebd13914f8d5"),
+    "actions/checkout v4 (Node 20) SHA must not be used; upgrade to v5",
+  );
+  // actions/setup-node v4 — Node 20
+  assert(
+    !text.includes("49933ea5288caeca8642d1e84afbd3f7d6820020"),
+    "actions/setup-node v4 (Node 20) SHA must not be used; upgrade to v5",
+  );
+});
+
+Deno.test("markdown-lint workflow pins actions/checkout and actions/setup-node to Node 24 SHAs", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+
+  // actions/checkout@v5 (Node 24)
+  assert(
+    text.includes(
+      "actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd",
+    ),
+    "expected actions/checkout pinned to v5 SHA 93cb6efe...",
+  );
+  // actions/setup-node@v5 (Node 24)
+  assert(
+    text.includes(
+      "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444",
+    ),
+    "expected actions/setup-node pinned to v5 SHA a0853c24...",
+  );
+});
