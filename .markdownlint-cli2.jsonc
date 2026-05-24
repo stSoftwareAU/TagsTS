@@ -1,0 +1,12 @@
+// markdownlint-cli2 configuration — drives the CI workflow
+// (.github/workflows/markdown-lint.yml).
+{
+  "globs": ["**/*.md", "!node_modules", "!.git"],
+  "config": {
+    // MD013 – line length: impractical for tables and URLs in docs.
+    "MD013": false,
+
+    // MD041 – first-line heading: PR summaries and fragments use ## Summary.
+    "MD041": false
+  }
+}
