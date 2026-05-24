@@ -65,12 +65,17 @@ getTag(taggable, "hello"); // null
 
 ### Merging tags from another object
 
-`addTags` copies every tag from a *source* `TagsInterface` into a *target*
+`addTags` copies every tag from a _source_ `TagsInterface` into a _target_
 `TagsInterface`. Existing tags on the target with the same name are overwritten;
 unrelated tags on the target are preserved.
 
 ```typescript
-import { addTag, addTags, getTag, type TagsInterface } from "@stsoftware/tags/mod";
+import {
+  addTag,
+  addTags,
+  getTag,
+  type TagsInterface,
+} from "@stsoftware/tags/mod";
 
 const source: TagsInterface = {};
 addTag(source, "category", "electronics");
@@ -82,32 +87,32 @@ addTag(target, "keep", "me");
 addTags(target, source);
 
 getTag(target, "category"); // "electronics"
-getTag(target, "keep");     // "me" (unchanged)
+getTag(target, "keep"); // "me" (unchanged)
 ```
 
 ## API reference
 
 ### Interfaces
 
-| Name            | Description                                                   |
-| --------------- | ------------------------------------------------------------- |
-| `TagsInterface` | An entity that may carry tags: `{ tags?: TagInterface[] }`.   |
-| `TagInterface`  | A single tag: `{ name: string; value: string }`.              |
+| Name            | Description                                                 |
+| --------------- | ----------------------------------------------------------- |
+| `TagsInterface` | An entity that may carry tags: `{ tags?: TagInterface[] }`. |
+| `TagInterface`  | A single tag: `{ name: string; value: string }`.            |
 
 ### Functions
 
-| Signature                                                                       | Returns                                                                       |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `addTag(taggable: TagsInterface, name: string, value: string): string \| null`  | Previous value if the tag was replaced, otherwise `null`.                     |
-| `addTags(target: TagsInterface, source: TagsInterface): void`                   | Nothing. Copies every tag from `source` into `target`, overwriting on clash.  |
-| `getTag(taggable: TagsInterface, name: string): string \| null`                 | The tag value, or `null` if the tag is not present.                           |
-| `removeTag(taggable: TagsInterface, name: string): string \| null`              | The removed value, or `null` if the tag was not present.                      |
+| Signature                                                                      | Returns                                                                      |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `addTag(taggable: TagsInterface, name: string, value: string): string \| null` | Previous value if the tag was replaced, otherwise `null`.                    |
+| `addTags(target: TagsInterface, source: TagsInterface): void`                  | Nothing. Copies every tag from `source` into `target`, overwriting on clash. |
+| `getTag(taggable: TagsInterface, name: string): string \| null`                | The tag value, or `null` if the tag is not present.                          |
+| `removeTag(taggable: TagsInterface, name: string): string \| null`             | The removed value, or `null` if the tag was not present.                     |
 
 ### Classes
 
-| Name            | Description                                                                 |
-| --------------- | --------------------------------------------------------------------------- |
-| `TagAndRelease` | Reads every `*.json` file in a directory and applies a tag list to each.    |
+| Name            | Description                                                              |
+| --------------- | ------------------------------------------------------------------------ |
+| `TagAndRelease` | Reads every `*.json` file in a directory and applies a tag list to each. |
 
 ## Command-line application
 
@@ -123,7 +128,8 @@ deno run --allow-read --allow-write \
 
 Required flags:
 
-- `--directory` — directory containing the `*.json` files to tag (non-recursive).
+- `--directory` — directory containing the `*.json` files to tag
+  (non-recursive).
 - `--tagList` — comma-separated `key=value` pairs to add to each file.
 
 The same behaviour is available programmatically via the `TagAndRelease` class:

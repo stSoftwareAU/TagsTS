@@ -1,13 +1,13 @@
 ## Summary
 
-Rewrote `README.md` so it matches the actual exported API and added a test
-suite (`test/ReadmeExamples.ts`) that runs every code snippet from the README
-to keep documentation and behaviour in lockstep. Closes #24.
+Rewrote `README.md` so it matches the actual exported API and added a test suite
+(`test/ReadmeExamples.ts`) that runs every code snippet from the README to keep
+documentation and behaviour in lockstep. Closes #24.
 
 Key documentation fixes:
 
-- Corrected the `addTags` signature — it takes a *source* `TagsInterface`, not
-  a `TagInterface[]`. The previous example would not have compiled.
+- Corrected the `addTags` signature — it takes a _source_ `TagsInterface`, not a
+  `TagInterface[]`. The previous example would not have compiled.
 - Documented the `TagAndRelease` class (exported from `mod.ts` but previously
   undocumented).
 - Updated the installation snippet to use `deno add jsr:@stsoftware/tags` and
@@ -18,8 +18,8 @@ Key documentation fixes:
 ## Evidence
 
 Backend/library change — no UI to screenshot. The README examples are now
-verified by `test/ReadmeExamples.ts`; `./quality.sh` runs cleanly (12 passed,
-0 failed).
+verified by `test/ReadmeExamples.ts`; `./quality.sh` runs cleanly (12 passed, 0
+failed).
 
 ```mermaid
 flowchart LR
