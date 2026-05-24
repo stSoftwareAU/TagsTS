@@ -6,6 +6,8 @@
     "linted",
     "lockstep",
     "ludeeus",
+    "semgrep",
+    "Semgrep",
     "shellcheck",
     "stsoftware"
   ],
