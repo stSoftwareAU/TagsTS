@@ -1,0 +1,11 @@
+{
+  // MD013: allow long lines inside tables and code blocks, which cannot be
+  // wrapped without breaking their structure or meaning.
+  "config": {
+    "MD013": {
+      "line_length": 80,
+      "tables": false,
+      "code_blocks": false
+    }
+  }
+}
