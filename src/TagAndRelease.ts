@@ -3,7 +3,7 @@ import { addTag } from "./TagsInterface.ts";
 /**
  * Options for the TagAndRelease process.
  */
-interface TagAndReleaseOptions {
+export interface TagAndReleaseOptions {
   /** The directory containing JSON files to be processed. */
   directory: string;
   /** A comma-separated list of tags to be added, in the format "key=value". */
