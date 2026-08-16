@@ -1,0 +1,151 @@
+name: Update Package Version
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - Develop
+
+# Cancel superseded runs on the same ref so rapid successive pushes don't
+# pile up redundant version-bump runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      # Checkout the code.
+      #
+      # `persist-credentials: false` — the default `true` would write
+      # `secrets.ACTIONS_PUSH` (a privileged PAT) into `.git/config` for
+      # every subsequent step. Anyone adding a future step that invokes a
+      # PR-controlled script would silently open a PAT-exfiltration vector.
+      # Strip credentials at checkout and re-introduce the PAT only at push
+      # time via a per-command auth header.
+      - name: Checkout Code
+        # actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          token: ${{ secrets.ACTIONS_PUSH }}
+          persist-credentials: false
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      # Set up Deno
+      - name: Setup Deno
+        # denoland/setup-deno@v2.0.4
+        uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282
+
+      # Check if version has been updated
+      - name: Check Version Update
+        id: check_version
+        env:
+          # Use env: to avoid injecting github context data directly into the
+          # shell script body — prevents run-shell-injection (Semgrep rule
+          # yaml.github-actions.security.run-shell-injection).
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          # Get the base branch version
+          git fetch origin "$BASE_REF:$BASE_REF" || true
+          git show "origin/$BASE_REF:deno.json" > /tmp/base_deno.json 2>/dev/null || echo "{}" > /tmp/base_deno.json
+
+          BASE_VERSION=$(deno eval "try { const json = JSON.parse(Deno.readTextFileSync('/tmp/base_deno.json')); console.log(json.version || ''); } catch { console.log(''); }")
+
+          # Get the current PR version
+          CURRENT_VERSION=$(deno eval "const json = JSON.parse(Deno.readTextFileSync('deno.json')); console.log(json.version)")
+
+          echo "Base version: $BASE_VERSION"
+          echo "Current version: $CURRENT_VERSION"
+
+          if [ -z "$BASE_VERSION" ]; then
+            echo "Could not determine base version, skipping update"
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          elif [ "$CURRENT_VERSION" = "$BASE_VERSION" ]; then
+            # $GITHUB_OUTPUT is line-oriented, so a newline in the version
+            # would inject extra step outputs; accept only a plain semver
+            # token.
+            if [[ ! "$BASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+              echo "::error::deno.json version is not a plain semver token; refusing to write step output" >&2
+              exit 1
+            fi
+            echo "Version unchanged, will update patch version"
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+            echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+          else
+            # Refuse a PR that sits *behind* the base branch. A merge conflict
+            # that silently takes Develop's older version must fail CI rather
+            # than look like a deliberate bump. `sort -V` is the portable
+            # semver order (GNU + BSD).
+            LOWEST=$(printf '%s\n%s\n' "$CURRENT_VERSION" "$BASE_VERSION" | sort -V | head -n1)
+            if [ "$LOWEST" = "$CURRENT_VERSION" ]; then
+              echo "::error::deno.json version ${CURRENT_VERSION} is behind base ${BASE_VERSION}; package versions must never go backwards" >&2
+              exit 1
+            fi
+            echo "Version has been updated in PR (${CURRENT_VERSION} vs base ${BASE_VERSION})"
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Update patch version if needed
+      - name: Update Patch Version
+        if: steps.check_version.outputs.needs_update == 'true'
+        env:
+          BASE_VERSION: ${{ steps.check_version.outputs.base_version }}
+        run: |
+          set -euo pipefail
+
+          # Parse version (e.g., 1.0.13 -> 1.0.14)
+          IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+
+          # Increment patch version
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+
+          echo "Updating version from $BASE_VERSION to $NEW_VERSION"
+
+          # Update deno.json using Deno
+          deno eval "
+            const json = JSON.parse(Deno.readTextFileSync('deno.json'));
+            json.version = '$NEW_VERSION';
+            Deno.writeTextFileSync('deno.json', JSON.stringify(json, null, 2) + '\n');
+          "
+
+          echo "Updated version to: $NEW_VERSION"
+
+      # Commit Changes
+      - name: Commit Version Update
+        if: steps.check_version.outputs.needs_update == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add deno.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: auto-increment patch version"
+          fi
+
+      # Push Changes — re-introduce the PAT only here via a per-command
+      # `http.https://github.com/.extraheader` so it never lives in
+      # `.git/config`. The PAT is passed through the step env: map rather
+      # than interpolated into the script body.
+      - name: Push Version Update
+        if: steps.check_version.outputs.needs_update == 'true'
+        env:
+          GH_PAT: ${{ secrets.ACTIONS_PUSH }}
+        run: |
+          set -euo pipefail
+          AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_PAT" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="$AUTH_HEADER" \
+            push origin || echo "Push failed or no changes to push"
