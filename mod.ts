@@ -29,6 +29,14 @@
 export { TagAndRelease } from "./src/TagAndRelease.ts";
 
 /**
+ * Options for the TagAndRelease process.
+ *
+ * @property {string} directory - The directory containing JSON files to be processed.
+ * @property {string} tagList - A comma-separated list of tags to be added, in the format "key=value".
+ */
+export type { TagAndReleaseOptions } from "./src/TagAndRelease.ts";
+
+/**
  * Interface defining the structure of a tag.
  *
  * @property {string} name - The name of the tag.
