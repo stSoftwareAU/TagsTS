@@ -135,7 +135,7 @@ function qualitySteps(doc: any): Array<Record<string, any>> {
 
 Deno.test("quality workflow checkout does not persist the push PAT to disk", async () => {
   // Issue #37: a persisted PAT sits in .git/config, readable by the
-  // `deno test --allow-all` step and any dependency it executes.
+  // `deno test` step and any dependency it executes.
   const checkouts = qualitySteps(await readWorkflow()).filter((step) =>
     typeof step.uses === "string" && step.uses.startsWith("actions/checkout@")
   );
@@ -172,12 +172,95 @@ Deno.test("quality workflow re-introduces the push PAT only at the push step", a
     );
   }
 
-  // No other run step may see the PAT, least of all the --allow-all tests.
+  // No other run step may see the PAT, least of all the dependency-running tests.
   for (const step of steps) {
     if (pushSteps.includes(step) || typeof step.run !== "string") continue;
     assert(
       !JSON.stringify(step).includes("secrets."),
       `'${step.name}' must not be handed a secret`,
     );
+  }
+});
+
+/** Permission flags on every `deno test` invocation in the quality job. */
+// deno-lint-ignore no-explicit-any
+function testStepFlags(steps: Array<Record<string, any>>): string[][] {
+  return steps
+    .filter((step) => typeof step.run === "string")
+    .flatMap((step) =>
+      (step.run as string).split("\n").filter((line) =>
+        /\bdeno\s+test\b/.test(line)
+      )
+    )
+    .map((line) =>
+      line.trim().split(/\s+/).map((token) => token.replace(/["']/g, ""))
+        .filter((token) => /^-(A|-allow-)/.test(token))
+    );
+}
+
+Deno.test("quality workflow runs tests without --allow-all", async () => {
+  // Issue #38 hop 2: `deno test --allow-all` hands every freshly updated
+  // dependency full access to the runner — network, subprocesses, env.
+  const invocations = testStepFlags(qualitySteps(await readWorkflow()));
+  assert(invocations.length > 0, "quality workflow is expected to run tests");
+  for (const flags of invocations) {
+    for (const flag of flags) {
+      assert(
+        flag !== "-A" && !flag.startsWith("--allow-all"),
+        `deno test must not be granted ${flag}`,
+      );
+      // No network (exfiltration), subprocess (git/curl), env or FFI access.
+      assert(
+        !/^--allow-(net|run|env|ffi|import)\b/.test(flag),
+        `deno test must not be granted ${flag}`,
+      );
+    }
+  }
+});
+
+Deno.test("quality workflow confines test writes to a temp directory", async () => {
+  // Unscoped --allow-write would let a dependency rewrite tracked files
+  // (e.g. .github/workflows/*) that the Commit/Push steps then publish.
+  const invocations = testStepFlags(qualitySteps(await readWorkflow()));
+  assert(invocations.length > 0, "quality workflow is expected to run tests");
+  for (const flags of invocations) {
+    assert(
+      !flags.some((f) => f === "-A" || f.startsWith("--allow-all")),
+      "--allow-all grants unscoped write access",
+    );
+    for (const flag of flags.filter((f) => f.startsWith("--allow-write"))) {
+      const scope = flag.split("=")[1] ?? "";
+      assert(scope !== "", `deno test write access must be scoped: ${flag}`);
+      for (const path of scope.split(",")) {
+        assert(
+          path === "$RUNNER_TEMP" || path === "${RUNNER_TEMP}",
+          `deno test may only write under $RUNNER_TEMP, not '${path}'`,
+        );
+      }
+    }
+  }
+});
+
+Deno.test("quality workflow breaks every hop of the issue #38 exploit chain", async () => {
+  const [doc, config] = await Promise.all([readWorkflow(), readConfig()]);
+  const steps = qualitySteps(doc);
+  // Hop 1: fresh releases are quarantined before `deno outdated` adopts them.
+  assert(
+    config.minimumDependencyAge,
+    "deno.json must set minimumDependencyAge",
+  );
+  // Hop 2: no test invocation runs with full permissions.
+  const flags = testStepFlags(steps).flat();
+  assert(
+    !flags.some((f) => f === "-A" || f.startsWith("--allow-all")),
+    "deno test must not run with --allow-all",
+  );
+  // Hop 3: the push PAT is never persisted to .git/config.
+  for (const step of steps) {
+    if (
+      typeof step.uses === "string" && step.uses.startsWith("actions/checkout@")
+    ) {
+      assertEquals(step.with?.["persist-credentials"], false);
+    }
   }
 });

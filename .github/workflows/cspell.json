@@ -5,16 +5,19 @@
     "cutoff",
     "denoland",
     "endency",
+    "extraheader",
     "imum",
     "linted",
     "lockstep",
     "ludeeus",
+    "mktemp",
     "pipefail",
     "repins",
     "semgrep",
     "Semgrep",
     "shellcheck",
-    "stsoftware"
+    "stsoftware",
+    "unquarantined"
   ],
   "flagWords": [
     "hte"

@@ -54,8 +54,14 @@ jobs:
           set -euo pipefail
           deno check
 
+      # Issue #38: tests run freshly updated dependencies, so grant least
+      # privilege — no net/run/env (no exfiltration or git), writes confined
+      # to the runner temp dir so tracked files cannot be tampered with.
       - name: Test
-        run: deno test --allow-all test/*.ts
+        run: |
+          set -euo pipefail
+          export TMPDIR="$RUNNER_TEMP"
+          deno test --allow-read=".,$RUNNER_TEMP" --allow-write="$RUNNER_TEMP" test/*.ts
 
       # Check for Changes
       - name: Check for Changes
