@@ -20,6 +20,7 @@ jobs:
       - name: Read version from deno.json
         id: version
         run: |
+          set -euo pipefail
           VERSION=$(jq -r .version deno.json)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
