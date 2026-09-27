@@ -14,12 +14,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
+      # Checkout the code.
+      #
+      # `persist-credentials: false` — the default would write
+      # `secrets.ACTIONS_PUSH` (a privileged PAT) into `.git/config`, where the
+      # `deno test --allow-all` step and any dependency it executes could read
+      # it (Issue #37). The PAT is re-introduced only at the push step.
       - name: Checkout Code
         # actions/checkout@v6.0.2
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          token: ${{ secrets.ACTIONS_PUSH }} # Use the GitHub Actions token for write access
+          token: ${{ secrets.ACTIONS_PUSH }}
+          persist-credentials: false
 
       # Set up Deno 2.x
       - name: Setup Deno
@@ -71,9 +77,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "chore: apply deno fmt and lint fixes"
 
-      # Push Changes
+      # Push Changes — the PAT arrives through env: and is used via a
+      # per-command extraheader, so it never lives in `.git/config`.
       - name: Push Changes
         if: steps.check_changes.outputs.has_changes == 'true' # Use step output
+        env:
+          GH_PAT: ${{ secrets.ACTIONS_PUSH }}
         run: |
           set -euo pipefail
-          git push origin
+          AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_PAT" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="$AUTH_HEADER" push origin

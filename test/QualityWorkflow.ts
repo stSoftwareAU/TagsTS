@@ -127,3 +127,57 @@ Deno.test("quality workflow declares least-privilege permissions", async () => {
     "the job pushes formatting fixes, so contents: write is the only scope it needs",
   );
 });
+
+// deno-lint-ignore no-explicit-any
+function qualitySteps(doc: any): Array<Record<string, any>> {
+  return doc.jobs.quality.steps;
+}
+
+Deno.test("quality workflow checkout does not persist the push PAT to disk", async () => {
+  // Issue #37: a persisted PAT sits in .git/config, readable by the
+  // `deno test --allow-all` step and any dependency it executes.
+  const checkouts = qualitySteps(await readWorkflow()).filter((step) =>
+    typeof step.uses === "string" && step.uses.startsWith("actions/checkout@")
+  );
+  assert(checkouts.length > 0, "quality workflow is expected to check out");
+  for (const step of checkouts) {
+    assertEquals(
+      step.with?.["persist-credentials"],
+      false,
+      `'${step.name}' must set persist-credentials: false`,
+    );
+  }
+});
+
+Deno.test("quality workflow re-introduces the push PAT only at the push step", async () => {
+  const steps = qualitySteps(await readWorkflow());
+  const pushSteps = steps.filter((step) =>
+    typeof step.run === "string" && /\bgit\b[^\n]*\bpush\b/.test(step.run)
+  );
+  assert(pushSteps.length > 0, "quality workflow is expected to push fixes");
+
+  for (const step of pushSteps) {
+    assert(
+      step.run.includes("http.https://github.com/.extraheader"),
+      `'${step.name}' must authenticate with a per-command extraheader`,
+    );
+    assert(
+      !step.run.includes("${{"),
+      `'${step.name}' must read the PAT from env:, not interpolate it into the script`,
+    );
+    const env = Object.values(step.env ?? {}).join("\n");
+    assert(
+      env.includes("secrets.ACTIONS_PUSH"),
+      `'${step.name}' must receive the PAT through its env: map`,
+    );
+  }
+
+  // No other run step may see the PAT, least of all the --allow-all tests.
+  for (const step of steps) {
+    if (pushSteps.includes(step) || typeof step.run !== "string") continue;
+    assert(
+      !JSON.stringify(step).includes("secrets."),
+      `'${step.name}' must not be handed a secret`,
+    );
+  }
+});
