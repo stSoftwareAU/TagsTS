@@ -161,6 +161,25 @@ Run the full quality gate (lint, type-check, format, tests) locally:
 ./quality.sh
 ```
 
+### Dependency quarantine
+
+CI updates dependencies unattended (`deno outdated --update --latest` in
+`.github/workflows/quality.yml`), so `deno.json` declares a minimum dependency
+age. Deno refuses any external version published within the last 24 hours, which
+stops a hijacked release from being adopted, executed and auto-pushed before it
+has been noticed. Internal `@stsoftware/*` scopes are excluded from the wait and
+update immediately.
+
+```json
+"minimumDependencyAge": {
+  "age": "P1D",
+  "exclude": ["jsr:@stsoftware/*", "npm:@stsoftware/*"]
+}
+```
+
+Do not pass `--min-dep-age` on the command line in CI — the flag overrides
+`deno.json` and would disable the quarantine.
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file

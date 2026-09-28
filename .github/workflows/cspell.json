@@ -2,15 +2,24 @@
   "version": "0.2",
   "language": "en-GB",
   "words": [
+    "bunx",
+    "cutoff",
     "denoland",
+    "endency",
+    "extraheader",
+    "imum",
     "linted",
     "lockstep",
     "ludeeus",
+    "mktemp",
+    "pipefail",
     "repins",
     "semgrep",
     "Semgrep",
     "shellcheck",
-    "stsoftware"
+    "softprops",
+    "stsoftware",
+    "unquarantined"
   ],
   "flagWords": [
     "hte"

@@ -28,12 +28,13 @@ jobs:
       - name: Detect Deno worker module
         id: detect-deno
         run: |
+          set -euo pipefail
           if [ -f worker/deno/mod.ts ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
-      # denoland/setup-deno@v2
+      # denoland/setup-deno@v2.0.4
       - if: steps.detect-deno.outputs.present == 'true'
         uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282
         with:
