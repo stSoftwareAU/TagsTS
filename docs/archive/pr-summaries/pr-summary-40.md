@@ -7,8 +7,8 @@ release (`v2.9.6`) through the SHA-pinned `denoland/setup-deno` action
 (`v2.0.4`, SHA re-resolved with `gh api` this run) and publishes with the native
 `deno publish`. The `jsr` npm wrapper only ever downloaded Deno and ran
 `deno publish`, so the publish behaviour is unchanged, but no package resolved
-from the registry at run time executes with the token in scope any more.
-Closes #40.
+from the registry at run time executes with the token in scope any more. Closes
+#40.
 
 ```mermaid
 flowchart LR
