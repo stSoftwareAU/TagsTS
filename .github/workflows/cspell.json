@@ -2,6 +2,7 @@
   "version": "0.2",
   "language": "en-GB",
   "words": [
+    "actionlint",
     "bunx",
     "cutoff",
     "denoland",
@@ -14,6 +15,7 @@
     "mktemp",
     "pipefail",
     "repins",
+    "rhysd",
     "semgrep",
     "Semgrep",
     "shellcheck",
