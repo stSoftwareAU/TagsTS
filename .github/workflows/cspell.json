@@ -3,6 +3,8 @@
   "language": "en-GB",
   "words": [
     "bunx",
+    "CODEOWNERS",
+    "Codeowners",
     "cutoff",
     "denoland",
     "endency",
@@ -12,12 +14,14 @@
     "lockstep",
     "ludeeus",
     "mktemp",
+    "nleck",
     "pipefail",
     "repins",
     "semgrep",
     "Semgrep",
     "shellcheck",
     "softprops",
+    "stservice",
     "stsoftware",
     "unquarantined"
   ],
