@@ -1,0 +1,18 @@
+# CODEOWNERS — required reviewers for the privileged CI surface (issue #53).
+#
+# These workflows run with write-scoped credentials: quality.yml and
+# update-package-version.yml push with the ACTIONS_PUSH PAT, publish.yml mints
+# the JSR OIDC id-token, and semgrep.yml / gitleaks.yml consume scanner
+# secrets. A change here needs an owner's approval once the Develop ruleset
+# enables "Require review from Code Owners".
+#
+# Owners MUST have write access, otherwise GitHub silently ignores the rule.
+# No team is granted access to this repository, so its admins are listed
+# directly. test/Codeowners.ts fails CI if a workflow is left unowned.
+
+# GitHub Actions workflows and composite actions.
+/.github/workflows/  @nleck @Green-Beret @stservice
+/.github/actions/    @nleck @Green-Beret @stservice
+
+# CODEOWNERS governs its own reviewers.
+/.github/CODEOWNERS  @nleck @Green-Beret @stservice
