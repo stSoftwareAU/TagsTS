@@ -33,7 +33,7 @@ Backend/CI change — no visual surface.
 ```mermaid
 flowchart LR
     PR[Pull request] --> C[checkout, no persisted credentials]
-    C --> A[docker://rhysd/actionlint@sha256 -color]
+    C --> A[docker run rhysd/actionlint@sha256 -color]
     A -- clean --> OK[Check passes]
     A -- finding --> F[Check fails]
 ```
@@ -49,3 +49,14 @@ flowchart LR
 - `actionlint -color` exits 0.
 - `deno test --allow-read test/ActionlintWorkflow.ts test/ActionPins.ts` passes.
 - `./quality.sh` passes.
+
+## Review follow-up
+
+- The first cut used `uses: docker://rhysd/actionlint@sha256:…`, which the
+  repository's Actions allowlist rejects, so every run ended in
+  `startup_failure` and no check was reported. The image now runs from a `run:`
+  step (`docker run … rhysd/actionlint@sha256:… -color`), still pinned to the
+  1.7.12 image digest.
+- `test/ActionlintWorkflow.ts` now asserts no step uses a `docker://` action and
+  that a `run:` step runs the digest-pinned image; both new assertions failed
+  against the old workflow and pass after the change.
