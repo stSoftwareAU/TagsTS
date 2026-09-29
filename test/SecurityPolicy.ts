@@ -6,17 +6,18 @@ import { assert, assertEquals } from "@std/assert";
 const POLICY_PATHS = ["SECURITY.md", ".github/SECURITY.md", "docs/SECURITY.md"];
 const PRIVATE_ROUTE = /\/security\/advisories\/new\b|mailto:[^\s)]+@/;
 const RESPONSE_TIME = /\bwithin\s+\d+\s+(?:business\s+)?(?:hours?|days?)\b/i;
+const SUPPORTED_ROW = /^\|\s*(\d+)\.x\s*\|[^\n]*(?:✅|\byes\b)/gim;
 
 /** Requirements a security policy text is missing; empty when compliant. */
 export function securityPolicyGaps(text: string, major: number): string[] {
   const gaps: string[] = [];
   if (!PRIVATE_ROUTE.test(text)) gaps.push("private reporting route");
   if (!RESPONSE_TIME.test(text)) gaps.push("response time");
-  const supportedRow = new RegExp(
-    `^\\|\\s*${major}\\.x\\s*\\|[^\\n]*(?:✅|\\byes\\b)`,
-    "im",
+  const supportedMajors = Array.from(
+    text.matchAll(SUPPORTED_ROW),
+    (match) => Number(match[1]),
   );
-  if (!supportedRow.test(text)) {
+  if (!supportedMajors.includes(major)) {
     gaps.push(`supported-versions row for ${major}.x`);
   }
   return gaps;
