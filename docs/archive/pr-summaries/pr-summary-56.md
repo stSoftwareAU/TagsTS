@@ -2,8 +2,8 @@
 
 ## Summary
 
-Closes #56. Adds a short `CONTRIBUTING.md` and a Keep a Changelog `CHANGELOG.md`,
-linked from the README.
+Closes #56. Adds a short `CONTRIBUTING.md` and a Keep a Changelog
+`CHANGELOG.md`, linked from the README.
 
 - [x] `CONTRIBUTING.md` — `Develop` integration branch (merge = JSR publish +
       GitHub Release), `./quality.sh` gate, and how `update-package-version.yml`
@@ -26,16 +26,16 @@ flowchart LR
 Docs-only change; no visual surface, so no screenshot.
 
 - `deno test --allow-all test/ContributingDocs.ts` → `ok | 3 passed | 0 failed`
-  (failed 3/3 before the docs existed; deleting a changelog link reference
-  fails with `heading [1.0.14] has no link reference`).
+  (failed 3/3 before the docs existed; deleting a changelog link reference fails
+  with `heading [1.0.14] has no link reference`).
 - `./quality.sh` → exit 0, `ok | 37 passed | 0 failed`.
 - `markdownlint-cli2` → 0 issues; `cspell` with the repo config → 0 issues.
 
 ## Test Plan
 
 - The contract test parses `update-package-version.yml` with `@std/yaml` and
-  asserts `CONTRIBUTING.md` names each `pull_request` target branch, so a
-  branch rename cannot leave the guide stale.
-- It asserts `CHANGELOG.md` has `## [Unreleased]` and that every version
-  heading has a link reference. It deliberately does not pin the current
-  `deno.json` version, which the auto-bump changes on every PR.
+  asserts `CONTRIBUTING.md` names each `pull_request` target branch, so a branch
+  rename cannot leave the guide stale.
+- It asserts `CHANGELOG.md` has `## [Unreleased]` and that every version heading
+  has a link reference. It deliberately does not pin the current `deno.json`
+  version, which the auto-bump changes on every PR.
