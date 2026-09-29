@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           export TMPDIR="$RUNNER_TEMP"
-          deno test --allow-read=".,$RUNNER_TEMP" --allow-write="$RUNNER_TEMP" test/*.ts
+          deno test --allow-read=".,$RUNNER_TEMP" --allow-write="$RUNNER_TEMP" --reporter=dot test/*.ts
 
       # Check for Changes
       - name: Check for Changes
