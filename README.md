@@ -183,6 +183,24 @@ update immediately.
 Do not pass `--min-dep-age` on the command line in CI — the flag overrides
 `deno.json` and would disable the quarantine.
 
+### Workflow lint
+
+Every pull request runs [actionlint](https://github.com/rhysd/actionlint) over
+`.github/workflows/` (`.github/workflows/actionlint.yml`), including shellcheck
+on each `run:` block, so a broken workflow fails the build before it merges. Run
+the same check locally with:
+
+```bash
+actionlint -color
+```
+
+```mermaid
+flowchart LR
+    PR[Pull request] --> A[actionlint job]
+    A -- clean --> OK[Check passes]
+    A -- syntax / expression / shellcheck finding --> F[Check fails]
+```
+
 ### Release SBOM
 
 Every GitHub release carries `sbom.cdx.json`, a CycloneDX 1.5 software bill of

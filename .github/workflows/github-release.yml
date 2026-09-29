@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(jq -r .version deno.json)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # Issue #57: attach a CycloneDX SBOM of the published exports' resolved
       # dependency graph, so dependency changes show up release to release.

@@ -1,0 +1,30 @@
+name: actionlint
+
+# Lints every workflow (with shellcheck on `run:` blocks) so workflow
+# regressions fail the pull request (Issue #58).
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # rhysd/actionlint:1.7.12 (bundles shellcheck), pinned to its image digest.
+      # Run from a `run:` step rather than `uses: docker://…`: the repo's
+      # Actions allowlist rejects docker:// references (they can never be
+      # pinned to a commit SHA), which made the job a silent startup_failure.
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
+            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color
