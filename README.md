@@ -161,6 +161,9 @@ Run the full quality gate (lint, type-check, format, tests) locally:
 ./quality.sh
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the branch model and automatic
+version bump, and [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 ### Dependency quarantine
 
 CI updates dependencies unattended (`deno outdated --update --latest` in
