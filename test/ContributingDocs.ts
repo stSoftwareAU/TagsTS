@@ -50,3 +50,26 @@ Deno.test("CHANGELOG.md follows Keep a Changelog with resolvable headings", asyn
     );
   }
 });
+
+Deno.test("CHANGELOG.md [Unreleased] compares from the newest listed release", async () => {
+  const changelog = await Deno.readTextFile("CHANGELOG.md");
+  const versions = [...changelog.matchAll(/^## \[(\d+\.\d+\.\d+)\]/gm)]
+    .map((m) => m[1].split(".").map(Number));
+  assert(versions.length > 0, "CHANGELOG.md lists no released versions");
+  const byVersion = (a: number[], b: number[]) =>
+    a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+  const newest = versions.sort(byVersion).at(-1)!.join(".");
+  const link = changelog.match(
+    /^\[Unreleased\]: https:\/\/\S+\/compare\/v(\d+\.\d+\.\d+)\.\.\.HEAD$/m,
+  );
+  assert(
+    link,
+    "CHANGELOG.md [Unreleased] must link to compare/v<x.y.z>...HEAD",
+  );
+  assert(
+    link[1] === newest,
+    `[Unreleased] compares from v${
+      link[1]
+    } but the newest heading is ${newest}`,
+  );
+});

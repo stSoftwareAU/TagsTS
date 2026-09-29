@@ -7,6 +7,10 @@
     "MD013": false,
 
     // MD041 – first-line heading: PR summaries and fragments use ## Summary.
-    "MD041": false
+    "MD041": false,
+
+    // MD024 – duplicate headings: CHANGELOG.md repeats "### Added" etc. under
+    // each release (Keep a Changelog), so only flag duplicate siblings.
+    "MD024": { "siblings_only": true }
   }
 }

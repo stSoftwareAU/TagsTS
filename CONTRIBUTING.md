@@ -57,7 +57,8 @@ user-visible change. The format follows
 
 ## Style
 
-- Use Australian English in code, comments and docs (colour, behaviour).
+- Use British spelling in code, comments and docs (colour, behaviour); the spell
+  check runs cspell with `en-GB`.
 - Use Deno tooling only (`deno fmt`, `deno lint`, `deno test`) — no Node.js
   tooling.
 - Keep changes small and focused, with tests that exercise real code.
