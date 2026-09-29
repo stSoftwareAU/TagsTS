@@ -229,6 +229,12 @@ gh release download v1.0.14 -p sbom.cdx.json -O old.cdx.json
 diff old.cdx.json sbom.cdx.json
 ```
 
+## Security
+
+Please report vulnerabilities privately, not in a public issue. See
+[SECURITY.md](SECURITY.md) for the reporting route, response times and supported
+versions.
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file
