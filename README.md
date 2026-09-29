@@ -180,6 +180,12 @@ update immediately.
 Do not pass `--min-dep-age` on the command line in CI — the flag overrides
 `deno.json` and would disable the quarantine.
 
+## Security
+
+Please report vulnerabilities privately, not in a public issue. See
+[SECURITY.md](SECURITY.md) for the reporting route, response times and supported
+versions.
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file
