@@ -161,6 +161,9 @@ Run the full quality gate (lint, type-check, format, tests) locally:
 ./quality.sh
 ```
 
+The gate (and the CI `Test` step) runs `deno test --reporter=dot`, so a green
+run prints one summary line; any failure is still reported in full.
+
 ### Dependency quarantine
 
 CI updates dependencies unattended (`deno outdated --update --latest` in
