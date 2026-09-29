@@ -24,9 +24,22 @@ jobs:
           VERSION=$(jq -r .version deno.json)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      # Issue #57: attach a CycloneDX SBOM of the published exports' resolved
+      # dependency graph, so dependency changes show up release to release.
+      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+        with:
+          deno-version: v2.9.6
+
+      - name: Generate SBOM
+        run: |
+          set -euo pipefail
+          deno run --allow-read=deno.json --allow-run=deno tools/Sbom.ts > sbom.cdx.json
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           generate_release_notes: true
+          files: sbom.cdx.json
+          fail_on_unmatched_files: true # A missing SBOM must fail the release.
