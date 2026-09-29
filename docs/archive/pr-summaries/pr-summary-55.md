@@ -17,7 +17,7 @@ CLI/CI-only change; no UI to screenshot.
 
 - TDD red: before the fix, `deno test --allow-read test/QuietGate.ts` failed
   (`4 passed | 2 failed`) — both the `quality.sh` and `quality.yml` checks
-  reported the un-reportered `deno test` command.
+  reported the un-reported `deno test` command.
 - TDD green: after the fix, `QuietGate.ts` + `QualityWorkflow.ts` pass
   (`16 passed | 0 failed`); the existing least-privilege checks on the CI
   `deno test` flags still pass.
