@@ -164,6 +164,9 @@ Run the full quality gate (lint, type-check, format, tests) locally:
 The gate (and the CI `Test` step) runs `deno test --reporter=dot`, so a green
 run prints one summary line; any failure is still reported in full.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the branch model and automatic
+version bump, and [CHANGELOG.md](CHANGELOG.md) for release notes.
+
 ### Dependency quarantine
 
 CI updates dependencies unattended (`deno outdated --update --latest` in
