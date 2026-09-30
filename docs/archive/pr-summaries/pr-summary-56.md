@@ -42,5 +42,5 @@ Docs-only change; no visual surface, so no screenshot.
 - It asserts `CHANGELOG.md` has `## [Unreleased]` and that every version heading
   has a link reference, and that the `[Unreleased]` compare link starts from the
   newest version heading in the file, so a new release entry cannot leave it
-  comparing from an older tag. It deliberately does not pin the current `deno.json`
-  version, which the auto-bump changes on every PR.
+  comparing from an older tag. It deliberately does not pin the current
+  `deno.json` version, which the auto-bump changes on every PR.
