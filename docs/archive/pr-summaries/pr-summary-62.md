@@ -12,20 +12,20 @@ BP-PERSIST-CREDS-semgrep). `test/SemgrepWorkflow.ts` now asserts the setting.
 ### Intent and Rationale
 
 - The next step, `semgrep ci`, runs a third-party container image that also
-  holds `SEMGREP_APP_TOKEN`. A token persisted on disk is readable by that
-  step, and nothing in the job needs it.
+  holds `SEMGREP_APP_TOKEN`. A token persisted on disk is readable by that step,
+  and nothing in the job needs it.
 
 ### Essential Design Decisions
 
-- I fixed the finding rather than suppressing it with
-  `# best-practice-ignore`, because no step in the job pushes.
-- The existing checkout SHA and its `# actions/checkout@v4.3.1` comment are
-  kept verbatim. This PR does not bump the pin.
+- I fixed the finding rather than suppressing it with `# best-practice-ignore`,
+  because no step in the job pushes.
+- The existing checkout SHA and its `# actions/checkout@v4.3.1` comment are kept
+  verbatim. This PR does not bump the pin.
 
 ### Undiscoverable Facts
 
-- The repository is public (`gh repo view --json isPrivate` returns `false`).
-  If `semgrep ci` needs to fetch the base commit for a diff-aware scan, an
+- The repository is public (`gh repo view --json isPrivate` returns `false`). If
+  `semgrep ci` needs to fetch the base commit for a diff-aware scan, an
   anonymous fetch is enough, so it does not need the persisted token.
 
 ## Evidence
