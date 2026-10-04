@@ -56,3 +56,25 @@ Deno.test("semgrep workflow pins third-party actions to commit SHAs", async () =
     );
   }
 });
+
+// Issue #62: the checkout must not write GITHUB_TOKEN into .git/config,
+// where the later `semgrep ci` step (which holds SEMGREP_APP_TOKEN) could
+// read it. No step in this job pushes, so the credential is never needed.
+Deno.test("semgrep workflow checks out without persisted credentials", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+  // deno-lint-ignore no-explicit-any
+  const doc = parse(text) as any;
+  const steps = doc.jobs.semgrep.steps as Array<Record<string, unknown>>;
+  const checkouts = steps.filter((s) =>
+    typeof s.uses === "string" && s.uses.startsWith("actions/checkout@")
+  );
+  assert(checkouts.length > 0, "semgrep job must check out the repository");
+  for (const checkout of checkouts) {
+    assertEquals(
+      // deno-lint-ignore no-explicit-any
+      (checkout.with as any)?.["persist-credentials"],
+      false,
+      "actions/checkout must set persist-credentials: false",
+    );
+  }
+});
