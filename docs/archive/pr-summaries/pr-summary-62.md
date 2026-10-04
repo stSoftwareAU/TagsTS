@@ -39,9 +39,7 @@ This change is CI-only, so there is no visual surface.
 - `actionlint .github/workflows/semgrep.yml` exited 0.
 - `./quality.sh` exited 0 with `ok | 69 passed | 0 failed`.
 
-**Docs sweep** — grep: `persist`, `semgrep` across `README.md`,
-`CONTRIBUTING.md` and `docs/` (excluding `docs/archive/pr-summaries`): no hits.
-No manual documents `semgrep.yml`'s checkout, so nothing needed updating.
+**Docs sweep** — grep: `persist`, `persist-credentials`, `semgrep`, `checkout` across `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md` and `docs/` (excluding `docs/archive/`); section: none — no manual documents the semgrep workflow (`docs/` holds only `archive/`, and the README `## Development` subsections cover the quality gate, dependency quarantine, workflow lint and release SBOM, not semgrep); no hits
 
 ## Test Plan
 
