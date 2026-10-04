@@ -6,15 +6,15 @@ Closes #60. `markdown-lint.yml` no longer runs on push to `Develop` (or
 `main`/`master`). It now runs on pull requests to any base branch, including
 `milestone/<slug>`, and on manual `workflow_dispatch`. While editing the file it
 was also brought in line with the fleet workflow checks: job-level
-`contents: read`, `persist-credentials: false` on checkout, and an exact pin
-for `markdownlint-cli2`.
+`contents: read`, `persist-credentials: false` on checkout, and an exact pin for
+`markdownlint-cli2`.
 
 ## Spec
 
 ### Intent and Rationale
 
-- A lint gate belongs on the PR. Running it again after the merge to the
-  default branch only spends runner minutes and cannot block anything.
+- A lint gate belongs on the PR. Running it again after the merge to the default
+  branch only spends runner minutes and cannot block anything.
 - `workflow_dispatch` keeps a manual run available now that the push trigger is
   gone.
 
@@ -43,8 +43,8 @@ flowchart LR
   push[Push to Develop] -. no longer triggers .-> lint
 ```
 
-- `deno test --allow-all test/MarkdownLintWorkflow.ts` on the base workflow
-  gave `FAILED | 4 passed | 5 failed`. After the fix it gave `ok`.
+- `deno test --allow-all test/MarkdownLintWorkflow.ts` on the base workflow gave
+  `FAILED | 4 passed | 5 failed`. After the fix it gave `ok`.
 - `actionlint -color .github/workflows/markdown-lint.yml` exited 0.
 - `./quality.sh` gave `ok | 68 passed | 0 failed`.
 - **Docs sweep:** I grepped `README.md`, `CONTRIBUTING.md` and `docs/`
@@ -55,8 +55,8 @@ flowchart LR
 
 ## Test Plan
 
-- `test/MarkdownLintWorkflow.ts` gains five tests. Each parses the workflow
-  with `@std/yaml`, and each was red against the base workflow:
+- `test/MarkdownLintWorkflow.ts` gains five tests. Each parses the workflow with
+  `@std/yaml`, and each was red against the base workflow:
   - there is no `on.push`, `pull_request` is present, and its branch filter
     matches `milestone/**`;
   - `workflow_dispatch` is present;
@@ -65,7 +65,7 @@ flowchart LR
   - `npm install` pins `markdownlint-cli2@<x.y.z>`.
 - No assertions were removed.
 - Branch outcomes: none added. The only conditional is the test-side
-  `branches !== undefined` guard, which copies the existing `ActionlintWorkflow.ts`
-  pattern.
+  `branches !== undefined` guard, which copies the existing
+  `ActionlintWorkflow.ts` pattern.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
