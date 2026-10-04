@@ -69,3 +69,58 @@ Deno.test("markdown-lint workflow pins actions/checkout and actions/setup-node t
     "expected actions/setup-node pinned to v5 SHA a0853c24...",
   );
 });
+
+// deno-lint-ignore no-explicit-any
+async function loadWorkflow(): Promise<any> {
+  return parse(await Deno.readTextFile(WORKFLOW_PATH));
+}
+
+// Issue #60: lint gates pull requests only, and follows the fleet workflow checks.
+Deno.test("markdown-lint workflow runs on pull requests, not default-branch pushes", async () => {
+  const doc = await loadWorkflow();
+  assert(doc.on?.pull_request !== undefined, "must trigger on pull_request");
+  assertEquals(doc.on.push, undefined, "must not trigger on push");
+
+  const branches = doc.on.pull_request?.branches;
+  if (branches !== undefined) {
+    assert(
+      branches.includes("milestone/**") || branches.includes("**"),
+      "a pull_request branch filter must also match milestone/**",
+    );
+  }
+});
+
+Deno.test("markdown-lint workflow keeps a manual workflow_dispatch trigger", async () => {
+  const doc = await loadWorkflow();
+  assert("workflow_dispatch" in doc.on);
+});
+
+Deno.test("markdown-lint workflow and job hold read-only contents permission", async () => {
+  const doc = await loadWorkflow();
+  assertEquals(doc.permissions, { contents: "read" });
+  assertEquals(doc.jobs?.markdownlint?.permissions, { contents: "read" });
+});
+
+Deno.test("markdown-lint job checks out without persisted credentials", async () => {
+  const doc = await loadWorkflow();
+  const steps: Array<Record<string, unknown>> = doc.jobs.markdownlint.steps;
+  const checkout = steps.find((s) =>
+    typeof s.uses === "string" && s.uses.startsWith("actions/checkout@")
+  );
+  assert(checkout, "job must check out the repository");
+  // deno-lint-ignore no-explicit-any
+  assertEquals((checkout.with as any)?.["persist-credentials"], false);
+});
+
+Deno.test("markdown-lint job installs a pinned markdownlint-cli2", async () => {
+  const doc = await loadWorkflow();
+  const steps: Array<Record<string, unknown>> = doc.jobs.markdownlint.steps;
+  const install = steps.find((s) =>
+    typeof s.run === "string" && s.run.includes("npm install")
+  );
+  assert(install, "a step must install markdownlint-cli2 via npm install");
+  assert(
+    /\bmarkdownlint-cli2@\d+\.\d+\.\d+\b/.test(install.run as string),
+    "markdownlint-cli2 must be pinned to an exact version",
+  );
+});
