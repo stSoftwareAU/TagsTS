@@ -48,11 +48,15 @@ flowchart LR
 - `actionlint -color .github/workflows/markdown-lint.yml` exited 0.
 - `./quality.sh` gave `ok | 68 passed | 0 failed`.
 
-**Docs sweep** — grep: `markdown-lint`, `markdownlint`, "Markdown Lint", `workflow_dispatch`, `push to`, "on push", `.github/workflows`; section: none — no manual documents `markdown-lint.yml`. The nearest CI sections are `README.md#workflow-lint` (actionlint.yml) and `CONTRIBUTING.md#quality-gate` (quality.yml). I read both through and they stay true; no hits needed updating
+**Docs sweep** — grep: `markdown-lint`, `markdownlint`, "Markdown Lint",
+`workflow_dispatch`, `push to`, "on push", `.github/workflows`; section: none —
+no manual documents `markdown-lint.yml`. The nearest CI sections are
+`README.md#workflow-lint` (actionlint.yml) and `CONTRIBUTING.md#quality-gate`
+(quality.yml). I read both through and they stay true; no hits needed updating
 
-- Hits I read and left unchanged: `CONTRIBUTING.md:11` (`publish.yml`, unchanged),
-  `CONTRIBUTING.md:36-38` (`quality.yml` gate, unchanged) and `README.md:217`
-  (the publish diagram, unchanged).
+- Hits I read and left unchanged: `CONTRIBUTING.md:11` (`publish.yml`,
+  unchanged), `CONTRIBUTING.md:36-38` (`quality.yml` gate, unchanged) and
+  `README.md:217` (the publish diagram, unchanged).
 
 ## Test Plan
 
