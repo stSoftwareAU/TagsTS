@@ -27,6 +27,12 @@ therefore never matched `"*"`, and its sub-issue PRs skipped the secrets scan.
 - **The test parses the YAML** and checks the filter with a small helper that
   copies GitHub's `*` and `**` rules. A separate test pins the helper itself,
   including the case where `"*"` does not match a milestone branch.
+- **The single-`*` loop tries a match before checking for `/`.** Review
+  caught that the original loop condition (`text[i] !== "/"`) stopped the
+  loop before it ever tried matching the rest of the pattern at the `/`
+  position, so a pattern such as `*/*` or `releases/*/hotfix` could never
+  match. The loop body now calls `globMatch` first and only then breaks on
+  `/`.
 
 ### Undiscoverable Facts
 
@@ -42,7 +48,13 @@ therefore never matched `"*"`, and its sub-issue PRs skipped the secrets scan.
   `ok | 2 passed | 0 failed`.
 - `deno fmt --check`, `deno lint`, `deno check test/GitleaksWorkflow.ts` and
   `actionlint .github/workflows/gitleaks.yml` all passed cleanly.
-- `./quality.sh < /dev/null`: `ok | 72 passed | 0 failed`, exit 0.
+- `./quality.sh < /dev/null`: `ok | 79 passed | 0 failed`, exit 0.
+- Review round 2 (PR #93): reverting the single-`*` loop fix and re-running
+  `deno test -A test/GitleaksWorkflow.ts` gave
+  `FAILED | 6 passed | 1 failed` on
+  `gitleaks branch filter helper mirrors GitHub glob semantics`
+  (`matchesBranchFilter("milestone/foo", ["*/*"])` returned `false` instead
+  of `true`). Restoring the fix returns `ok | 7 passed | 0 failed`.
 - **Docs sweep** — grep: `gitleaks`, `milestone`; section: none — no manual
   documents the gitleaks workflow or its branch filter. Also grepped
   `gitleaks.yml`, `base_ref` and "secret" across README.md, CONTRIBUTING.md,
@@ -56,7 +68,11 @@ therefore never matched `"*"`, and its sub-issue PRs skipped the secrets scan.
 - `test/GitleaksWorkflow.ts`, test
   `gitleaks branch filter helper mirrors GitHub glob semantics`. This is the
   negative check: `"*"` rejects `milestone/foo`, and `milestone/*` rejects
-  `milestone/a/b`.
+  `milestone/a/b`. Review round 2 added four more assertions pinning that a
+  `*` immediately followed by `/` still matches: `*/*` and `*/foo` against
+  `milestone/foo`, `releases/*/hotfix` against `releases/v1/hotfix`, and the
+  combined filter `["*", "*/*"]` against `milestone/issue-65-slug`. Each one
+  fails on the unfixed loop (see Evidence).
 - `test/GitleaksWorkflow.ts`, test
   `gitleaks workflow runs on PRs targeting Develop, main and milestone branches`.
   It failed on the base branch and passes with the fix.

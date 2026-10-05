@@ -51,10 +51,11 @@ function globMatch(
     return false;
   }
 
-  for (let i = textIndex; i <= text.length && text[i] !== "/"; i++) {
+  for (let i = textIndex; i <= text.length; i++) {
     if (globMatch(text, i, pattern, patternIndex + 1)) {
       return true;
     }
+    if (text[i] === "/") break;
   }
   return false;
 }
@@ -65,6 +66,16 @@ Deno.test("gitleaks branch filter helper mirrors GitHub glob semantics", () => {
   assertEquals(matchesBranchFilter("milestone/foo", ["milestone/*"]), true);
   assertEquals(matchesBranchFilter("milestone/a/b", ["milestone/*"]), false);
   assertEquals(matchesBranchFilter("milestone/a/b", ["**"]), true);
+  assertEquals(matchesBranchFilter("milestone/foo", ["*/*"]), true);
+  assertEquals(matchesBranchFilter("milestone/foo", ["*/foo"]), true);
+  assertEquals(
+    matchesBranchFilter("releases/v1/hotfix", ["releases/*/hotfix"]),
+    true,
+  );
+  assertEquals(
+    matchesBranchFilter("milestone/issue-65-slug", ["*", "*/*"]),
+    true,
+  );
 });
 
 Deno.test("gitleaks workflow runs on PRs targeting Develop, main and milestone branches", async () => {
