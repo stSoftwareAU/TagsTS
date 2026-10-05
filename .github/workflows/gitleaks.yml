@@ -9,7 +9,9 @@ name: Gitleaks
 
 on:
   pull_request:
-    branches: ["*"]
+    # "*" does not match "/", so milestone/* is listed explicitly to
+    # ensure milestone sub-issue PRs are scanned (Issue #65).
+    branches: ["*", "milestone/*"]
 
 permissions:
   contents: read
@@ -30,7 +32,9 @@ jobs:
       # NEAT-AI quality.yml pattern.
       - name: Fetch base branch
         if: github.event_name == 'pull_request'
-        run: git fetch origin "${{ github.base_ref }}:${{ github.base_ref }}" || true
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: git fetch origin "$BASE_REF:$BASE_REF" || true
       # gitleaks/gitleaks-action@v3.0.0
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e
         env:
