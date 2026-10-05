@@ -6,6 +6,9 @@
 //
 // Also verifies the workflow pins gitleaks-action to the expected
 // release. Tracked in issue #68.
+//
+// Also verifies the checkout step does not persist the GITHUB_TOKEN into
+// .git/config. Tracked in issue #71.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
 
@@ -104,10 +107,7 @@ const ACTION = "gitleaks/gitleaks-action";
 const EXPECTED_SHA = "e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e";
 const EXPECTED_TAG = "v3.0.0";
 
-/** Escapes `text` for use inside a `RegExp`. */
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 /**
  * Scans `text` for a `- uses: <action>@<40-hex-sha>` line and returns the
@@ -118,24 +118,21 @@ export function actionPin(
   text: string,
   action: string,
 ): { sha: string; comment: string | undefined } | undefined {
-  const usesPattern = new RegExp(
-    `^- uses: ${escapeRegExp(action)}@([0-9a-f]{40})$`,
-  );
-  const commentPattern = new RegExp(
-    `^# ${escapeRegExp(action)}@(.+)$`,
-  );
+  const usesPrefix = `- uses: ${action}@`;
+  const commentPrefix = `# ${action}@`;
 
   const lines = text.split("\n").map((line) => line.trim());
   for (let i = 0; i < lines.length; i++) {
-    const match = usesPattern.exec(lines[i]);
-    if (!match) continue;
+    const line = lines[i];
+    if (!line.startsWith(usesPrefix)) continue;
+    const sha = line.slice(usesPrefix.length);
+    if (!SHA_PATTERN.test(sha)) continue;
 
     const previous = i > 0 ? lines[i - 1] : "";
-    const commentMatch = commentPattern.exec(previous);
-    return {
-      sha: match[1],
-      comment: commentMatch ? commentMatch[1] : undefined,
-    };
+    const comment = previous.startsWith(commentPrefix)
+      ? previous.slice(commentPrefix.length)
+      : undefined;
+    return { sha, comment };
   }
   return undefined;
 }
@@ -204,4 +201,87 @@ Deno.test("gitleaks workflow pins gitleaks-action to the expected release", asyn
     sha: EXPECTED_SHA,
     comment: EXPECTED_TAG,
   });
+});
+
+/**
+ * Returns the `uses` of every actions/checkout step in `steps` that does not
+ * set `persist-credentials: false`, so the token is not left in .git/config.
+ */
+export function checkoutsPersistingCredentials(
+  steps: Array<Record<string, unknown>>,
+): string[] {
+  return steps
+    .filter((step) =>
+      typeof step.uses === "string" && step.uses.startsWith("actions/checkout@")
+    )
+    .filter((step) =>
+      (step.with as Record<string, unknown> | undefined)?.[
+        "persist-credentials"
+      ] !== false
+    )
+    .map((step) => step.uses as string);
+}
+
+Deno.test("checkoutsPersistingCredentials flags checkout steps missing persist-credentials: false", () => {
+  assertEquals(
+    checkoutsPersistingCredentials([
+      {
+        uses: "actions/checkout@" + "a".repeat(40),
+        with: { "fetch-depth": 0, "persist-credentials": false },
+      },
+    ]),
+    [],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      {
+        uses: "actions/checkout@" + "b".repeat(40),
+        with: { "fetch-depth": 0 },
+      },
+    ]),
+    ["actions/checkout@" + "b".repeat(40)],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      { uses: "actions/checkout@" + "c".repeat(40) },
+    ]),
+    ["actions/checkout@" + "c".repeat(40)],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      {
+        uses: "actions/checkout@" + "d".repeat(40),
+        with: { "persist-credentials": true },
+      },
+    ]),
+    ["actions/checkout@" + "d".repeat(40)],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      { uses: "gitleaks/gitleaks-action@" + "e".repeat(40) },
+      { run: "echo" },
+    ]),
+    [],
+  );
+});
+
+Deno.test("gitleaks job checks out without persisted credentials, keeping full history", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+  // deno-lint-ignore no-explicit-any
+  const doc = parse(text) as any;
+  const steps = doc.jobs.gitleaks.steps as Array<Record<string, unknown>>;
+
+  const checkoutStep = steps.find((s) =>
+    typeof s.uses === "string" && s.uses.startsWith("actions/checkout@")
+  );
+  assert(checkoutStep, "actions/checkout step must be present");
+
+  assertEquals(checkoutsPersistingCredentials(steps), []);
+
+  const withBlock = checkoutStep!.with as Record<string, unknown>;
+  assertEquals(withBlock["fetch-depth"], 0);
 });
