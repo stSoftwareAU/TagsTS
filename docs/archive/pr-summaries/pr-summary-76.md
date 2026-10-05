@@ -13,10 +13,10 @@ deno-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup-deno.outputs.deno-versi
 
 - [x] Add `id: setup-deno` and a cache step to `quality.yml`, placed before
       `deno outdated`
-- [x] Add the same cache step to `markdown-lint.yml`, gated on the same `if:`
-      as setup-deno
-- [x] Extend `test/QualityWorkflow.ts` and `test/MarkdownLintWorkflow.ts`
-      with a `denoCacheProblems` validator and tests for each of its branches
+- [x] Add the same cache step to `markdown-lint.yml`, gated on the same `if:` as
+      setup-deno
+- [x] Extend `test/QualityWorkflow.ts` and `test/MarkdownLintWorkflow.ts` with a
+      `denoCacheProblems` validator and tests for each of its branches
 
 ## Spec
 
@@ -32,9 +32,9 @@ a stale or poisoned near-match.
 - **setup-deno's own `cache: true` is not used.** In v2.0.4, `src/cache.ts`
   builds the primary key as
   `deno-cache-${RUNNER_OS}-${RUNNER_ARCH}-${GITHUB_JOB}-${cacheHash}`. It always
-  passes `deno-cache-${RUNNER_OS}-${RUNNER_ARCH}` as a restore key, and the
-  Deno version is not in the key. A broad fallback would therefore always
-  apply, which is the stale-cache risk the issue warns about.
+  passes `deno-cache-${RUNNER_OS}-${RUNNER_ARCH}` as a restore key, and the Deno
+  version is not in the key. A broad fallback would therefore always apply,
+  which is the stale-cache risk the issue warns about.
 - **Exact key, no `restore-keys`.** The key contains the OS, the architecture,
   the resolved Deno version (setup-deno's `deno-version` output) and
   `hashFiles('deno.json')`. A change to any of them is a clean miss.
@@ -54,8 +54,8 @@ Both SHAs were resolved, not written from memory:
 
 - `gh api repos/denoland/setup-deno/commits/v2.0.4` →
   `667a34cdef165d8d2b2e98dde39547c9daac7282`. This is the existing pin. Its
-  `action.yml` has `cache` (default `false`), `cache-hash`, and a
-  `deno-version` output.
+  `action.yml` has `cache` (default `false`), `cache-hash`, and a `deno-version`
+  output.
 - `gh api repos/actions/cache/commits/v6.1.0` →
   `55cc8345863c7cc4c66a329aec7e433d2d1c52a9`. It is a `node24` action with
   `post-if: success()`.
