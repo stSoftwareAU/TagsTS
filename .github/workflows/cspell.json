@@ -15,6 +15,7 @@
     "lockstep",
     "ludeeus",
     "mktemp",
+    "nosemgrep",
     "pipefail",
     "purl",
     "purls",
