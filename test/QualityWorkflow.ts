@@ -241,6 +241,187 @@ Deno.test("quality workflow confines test writes to a temp directory", async () 
   }
 });
 
+// Issue #76: `deno outdated` and `deno test` re-download every module on
+// each run because the Deno module cache (DENO_DIR) is never persisted
+// between workflow runs. Cache it on an exact key — Deno version plus
+// deno.json hash — so a change to either misses cleanly instead of
+// restoring a stale (and potentially tampered-with) DENO_DIR.
+/**
+ * Checks the quality workflow's steps for a correctly configured,
+ * exact-match Deno module cache. Returns an empty array when everything is
+ * correct, otherwise a list of human-readable problem descriptions.
+ */
+// deno-lint-ignore no-explicit-any
+function denoCacheProblems(steps: Array<Record<string, any>>): string[] {
+  const problems: string[] = [];
+
+  const setupDenoIdx = steps.findIndex((step) =>
+    typeof step.uses === "string" &&
+    step.uses.startsWith("denoland/setup-deno@")
+  );
+  if (setupDenoIdx === -1) {
+    problems.push("no denoland/setup-deno step found");
+  } else {
+    const setupDeno = steps[setupDenoIdx];
+    if (setupDeno.id !== "setup-deno") {
+      problems.push("setup-deno step must have id: setup-deno");
+    }
+    if (setupDeno.with?.cache === true || setupDeno.with?.cache === "true") {
+      problems.push(
+        "setup-deno step must not use its own cache: true (it always falls back to a stale broad-prefix key)",
+      );
+    }
+  }
+
+  const cacheIndices = steps
+    .map((step, index) => ({ step, index }))
+    .filter(({ step }) =>
+      typeof step.uses === "string" && step.uses.startsWith("actions/cache@")
+    )
+    .map(({ index }) => index);
+
+  const outdatedIdx = steps.findIndex((step) =>
+    typeof step.run === "string" && step.run.includes("deno outdated")
+  );
+
+  if (cacheIndices.length !== 1) {
+    problems.push(
+      `expected exactly one actions/cache step, found ${cacheIndices.length}`,
+    );
+    return problems;
+  }
+
+  const cacheIdx = cacheIndices[0];
+  const cacheStep = steps[cacheIdx];
+
+  if (setupDenoIdx !== -1 && cacheIdx <= setupDenoIdx) {
+    problems.push("cache step must come after the setup-deno step");
+  }
+  if (outdatedIdx !== -1 && cacheIdx >= outdatedIdx) {
+    problems.push("cache step must come before the deno outdated step");
+  }
+
+  if (cacheStep.with?.path !== "~/.cache/deno") {
+    problems.push(
+      `cache step 'with.path' must be '~/.cache/deno', got '${cacheStep.with?.path}'`,
+    );
+  }
+
+  const key = typeof cacheStep.with?.key === "string" ? cacheStep.with.key : "";
+  if (!key.includes("steps.setup-deno.outputs.deno-version")) {
+    problems.push(
+      "cache key must include steps.setup-deno.outputs.deno-version",
+    );
+  }
+  if (!key.includes("hashFiles('deno.json')")) {
+    problems.push("cache key must include hashFiles('deno.json')");
+  }
+  if (!key.includes("runner.os")) {
+    problems.push("cache key must include runner.os");
+  }
+
+  if (cacheStep.with && "restore-keys" in cacheStep.with) {
+    problems.push(
+      "cache step must not set restore-keys (it would fall back to a stale entry)",
+    );
+  }
+
+  return problems;
+}
+
+/** A minimal, otherwise-valid steps fixture for denoCacheProblems tests. */
+// deno-lint-ignore no-explicit-any
+function validCacheFixture(): Array<Record<string, any>> {
+  return [
+    {
+      name: "Setup Deno",
+      id: "setup-deno",
+      uses: "denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282",
+    },
+    {
+      name: "Cache Deno dependencies",
+      uses: "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+      with: {
+        path: "~/.cache/deno",
+        key:
+          "deno-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup-deno.outputs.deno-version }}-${{ hashFiles('deno.json') }}",
+      },
+    },
+    {
+      name: "Update Deno",
+      run: "deno outdated --update --latest",
+    },
+  ];
+}
+
+Deno.test("quality workflow caches the Deno directory on an exact key", async () => {
+  const steps = qualitySteps(await readWorkflow());
+  assertEquals(denoCacheProblems(steps), []);
+});
+
+Deno.test("quality workflow Deno cache never falls back to a stale entry", async () => {
+  const steps = qualitySteps(await readWorkflow());
+  const cacheStep = steps.find((step) =>
+    typeof step.uses === "string" && step.uses.startsWith("actions/cache@")
+  );
+  assert(cacheStep, "expected an actions/cache step");
+  assertEquals(cacheStep!.with?.["restore-keys"], undefined);
+
+  const setupDeno = steps.find((step) =>
+    typeof step.uses === "string" &&
+    step.uses.startsWith("denoland/setup-deno@")
+  );
+  assert(setupDeno, "expected a denoland/setup-deno step");
+  const cacheFlag = setupDeno!.with?.cache;
+  assert(
+    cacheFlag !== true && cacheFlag !== "true",
+    "setup-deno step must not enable its own cache: true",
+  );
+});
+
+Deno.test("denoCacheProblems: valid fixture yields no problems", () => {
+  assertEquals(denoCacheProblems(validCacheFixture()), []);
+});
+
+Deno.test("denoCacheProblems: flags a cache step with restore-keys present", () => {
+  const steps = validCacheFixture();
+  steps[1].with["restore-keys"] = "deno-";
+  assert(denoCacheProblems(steps).length > 0);
+});
+
+Deno.test("denoCacheProblems: flags a key missing hashFiles('deno.json')", () => {
+  const steps = validCacheFixture();
+  steps[1].with.key =
+    "deno-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup-deno.outputs.deno-version }}";
+  assert(denoCacheProblems(steps).length > 0);
+});
+
+Deno.test("denoCacheProblems: flags a key missing the deno-version output", () => {
+  const steps = validCacheFixture();
+  steps[1].with.key =
+    "deno-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('deno.json') }}";
+  assert(denoCacheProblems(steps).length > 0);
+});
+
+Deno.test("denoCacheProblems: flags setup-deno with cache: true", () => {
+  const steps = validCacheFixture();
+  steps[0].with = { cache: true };
+  assert(denoCacheProblems(steps).length > 0);
+});
+
+Deno.test("denoCacheProblems: flags no cache step at all", () => {
+  const steps = validCacheFixture();
+  steps.splice(1, 1);
+  assert(denoCacheProblems(steps).length > 0);
+});
+
+Deno.test("denoCacheProblems: flags cache step placed after deno outdated", () => {
+  const steps = validCacheFixture();
+  const [cacheStep] = steps.splice(1, 1);
+  steps.push(cacheStep);
+  assert(denoCacheProblems(steps).length > 0);
+});
+
 Deno.test("quality workflow breaks every hop of the issue #38 exploit chain", async () => {
   const [doc, config] = await Promise.all([readWorkflow(), readConfig()]);
   const steps = qualitySteps(doc);
