@@ -40,9 +40,21 @@ jobs:
           fi
       # denoland/setup-deno@v2.0.4
       - if: steps.detect-deno.outputs.present == 'true'
+        id: setup-deno
         uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282
         with:
           deno-version: v2.x
+      # Cache downloaded modules on an exact key — Deno version plus the
+      # deno.json hash, no restore-keys — so any deno.json change misses
+      # cleanly (Issue #76). setup-deno's `cache: true` always falls back to
+      # a broad prefix key, so it is not used.
+      - if: steps.detect-deno.outputs.present == 'true'
+        name: Cache Deno dependencies
+        # actions/cache@v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ runner.arch }}-${{ steps.setup-deno.outputs.deno-version }}-${{ hashFiles('deno.json') }}
       - if: steps.detect-deno.outputs.present == 'true'
         name: Validate Mermaid blocks
         run: deno run --allow-read --allow-env=DEBUG,LOG_LEVEL,CONFIG_PATH,OUTPUT_JSON worker/deno/mod.ts check-mermaid

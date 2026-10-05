@@ -1,6 +1,8 @@
 // Verifies every GitHub Action and reusable workflow referenced by the CI
 // workflows is pinned to an immutable 40-character commit SHA rather than a
-// mutable tag or branch (CWE-494). Tracked in issue #39.
+// mutable tag or branch (CWE-494). Tracked in issue #39. Also guards against
+// actions/checkout releases that run on the deprecated node20 Actions
+// runtime, which GitHub removed on 2026-09-16 (issue #72).
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
 
@@ -11,6 +13,23 @@ const SHA_PIN = /@[0-9a-f]{40}$/;
 export function isPinned(uses: string): boolean {
   if (uses.startsWith("./") || uses.startsWith("docker://")) return true;
   return SHA_PIN.test(uses);
+}
+
+/**
+ * actions/checkout commit SHAs whose `action.yml` declares `using: node20`,
+ * a runtime GitHub removed on 2026-09-16 (issue #72). Verified with
+ * `gh api repos/actions/checkout/commits/<tag> --jq .sha`.
+ */
+export const NODE20_CHECKOUT_SHAS: ReadonlyMap<string, string> = new Map([
+  ["11d5960a326750d5838078e36cf38b85af677262", "v4.4.0"],
+  ["34e114876b0b11c390a56381ad16ebd13914f8d5", "v4.3.1"],
+  ["11bd71901bbe5b1630ceea73d27597364c9af683", "v4.2.2"],
+]);
+
+/** True when `uses` pins actions/checkout to a node20-runtime release. */
+export function usesNode20Checkout(uses: string): boolean {
+  const [action, ref] = uses.split("@");
+  return action === "actions/checkout" && NODE20_CHECKOUT_SHAS.has(ref ?? "");
 }
 
 /** Every `uses:` reference (step-level and job-level) in a parsed workflow. */
@@ -66,4 +85,58 @@ Deno.test("every workflow action is pinned to a commit SHA", async () => {
 
   assert(checked > 0, "no `uses:` references found; the scan is vacuous");
   assertEquals(unpinned, [], "actions must be pinned to a 40-char commit SHA");
+});
+
+Deno.test("usesNode20Checkout flags each known node20 checkout SHA", () => {
+  for (const sha of NODE20_CHECKOUT_SHAS.keys()) {
+    assert(usesNode20Checkout(`actions/checkout@${sha}`));
+  }
+});
+
+Deno.test("usesNode20Checkout accepts node24 checkout and unrelated actions", () => {
+  assertEquals(
+    usesNode20Checkout(
+      "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20Checkout(
+      "actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20Checkout(
+      "other/action@11d5960a326750d5838078e36cf38b85af677262",
+    ),
+    false,
+  );
+  assertEquals(usesNode20Checkout("./.github/actions/local"), false);
+});
+
+Deno.test("no workflow pins actions/checkout to a node20 runtime release", async () => {
+  const files = await workflowFiles();
+  assert(files.length > 0, `no workflows found in ${WORKFLOW_DIR}`);
+
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const file of files) {
+    for (const uses of usesRefs(parse(await Deno.readTextFile(file)))) {
+      const [action, ref] = uses.split("@");
+      if (action !== "actions/checkout") continue;
+      checked++;
+      const tag = NODE20_CHECKOUT_SHAS.get(ref ?? "");
+      if (usesNode20Checkout(uses)) {
+        offenders.push(`${file}: ${uses} (${tag})`);
+      }
+    }
+  }
+
+  assert(checked > 0, "no actions/checkout references found; scan is vacuous");
+  assertEquals(
+    offenders,
+    [],
+    "actions/checkout must be on a node24 release, e.g. v6.0.2",
+  );
 });
