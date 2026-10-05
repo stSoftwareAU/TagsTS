@@ -16,11 +16,11 @@ so PRs into `milestone/<slug>` skipped the Semgrep scan (finding
 
 ### Essential Design Decisions
 
-- I used `["**"]` instead of the issue's example
-  `[Develop, main, milestone/*]`. `["**"]` keeps the workflow's original
-  all-branches intent. It also matches nested slugs, which `milestone/*` would
-  miss for the same reason that `*` missed `milestone/<slug>`. This is the same
-  fix PR #90 made to `markdown-lint.yml`.
+- I used `["**"]` instead of the issue's example `[Develop, main, milestone/*]`.
+  `["**"]` keeps the workflow's original all-branches intent. It also matches
+  nested slugs, which `milestone/*` would miss for the same reason that `*`
+  missed `milestone/<slug>`. This is the same fix PR #90 made to
+  `markdown-lint.yml`.
 
 ### Undiscoverable Facts
 
@@ -41,9 +41,9 @@ This change is CI-only, so there is no visual surface.
 
 **Docs sweep** — grep: `semgrep`, `branches`, `milestone` across `README.md`,
 `AGENTS.md`, `docs/` and every `*.md` outside `docs/archive/`; no hits. No
-manual documents the Semgrep trigger. The only explanation is the new comment
-at `.github/workflows/semgrep.yml:12`, and it is still true because it states
-the `**` and `*` behaviour that this change relies on.
+manual documents the Semgrep trigger. The only explanation is the new comment at
+`.github/workflows/semgrep.yml:12`, and it is still true because it states the
+`**` and `*` behaviour that this change relies on.
 
 ## Test Plan
 
@@ -60,8 +60,9 @@ the `**` and `*` behaviour that this change relies on.
     red.
 - Branch outcomes:
   - `test/SemgrepWorkflow.ts:84`: `undefined`, meaning no filter, which runs on
-    every branch. Accepted, in the negative test. Not mutation-run: removing
-    the line makes `undefined` fall through to `false`, which the test asserts against.
+    every branch. Accepted, in the negative test. Not mutation-run: removing the
+    line makes `undefined` fall through to `false`, which the test asserts
+    against.
   - `test/SemgrepWorkflow.ts:85`: an array containing `**` or `milestone/**`.
     Accepted, in the positive and negative tests. Mutation results are above.
   - `test/SemgrepWorkflow.ts:85`: a non-array, or an array missing both
