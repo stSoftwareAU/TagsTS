@@ -63,10 +63,14 @@ Both SHAs were resolved, not written from memory:
 ## Evidence
 
 - `timeout 900 ./quality.sh < /dev/null`: `ok | 114 passed | 0 failed`.
-- **Docs sweep:** grepped `*.md` (excluding the PR summaries) for
-  `setup-deno|actions/cache|cache/deno|DENO_DIR`. There were no hits, so no
-  README or doc describes the workflow cache. The only explanatory text is the
-  new comment above each cache step.
+- **Docs sweep** — grep: `setup-deno`, `actions/cache`, `cache/deno`, `DENO_DIR`, `quality.yml`, `markdown-lint.yml`, `deno outdated`; section: `README.md#dependency-quarantine`; no hits needing a change.
+  Nothing describes the workflow cache. `README.md#dependency-quarantine`,
+  the section that documents both workflows, and
+  `CONTRIBUTING.md#quality-gate` were read through. Their claims about `deno outdated --update --latest`,
+  the `minimumDependencyAge` quarantine, the pinned `markdownlint-cli2`
+  install and the CI gate on non-`Develop` branches are still true. The cache
+  step only restores and saves `~/.cache/deno`, and it is keyed on the
+  committed `deno.json`.
 - No existing assertion was removed or loosened.
 
 ## Test Plan
