@@ -19,6 +19,7 @@ jobs:
   semgrep:
     name: Semgrep SAST scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     container:
       # semgrep/semgrep 1.163.0 (multi-arch OCI index digest; tag resolved
       # from the digest via the Docker Hub registry, Issue #74). The tag lets
