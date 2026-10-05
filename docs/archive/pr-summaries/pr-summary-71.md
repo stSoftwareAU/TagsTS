@@ -40,9 +40,9 @@ SHA are unchanged.
   `Actual ["actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"] / Expected []`.
 - Green after the fix: `deno test -A test/GitleaksWorkflow.ts` passed 9 of 9
   tests, and `./quality.sh` passed 87 tests with 0 failures.
-- Docs sweep: a grep for `persist.?credential` across `*.md` (excluding PR
-  summaries) found no hits. `README.md`, `CONTRIBUTING.md` and `SECURITY.md` do
-  not mention gitleaks, so there is no prose to update.
+
+**Docs sweep** — grep: `gitleaks`, `persist-credentials`, `persist.?credential`, `actions/checkout`; section: none — no manual documents the Gitleaks workflow (`README.md`'s Development subsections cover only the quality gate, dependency quarantine, actionlint and the release SBOM, and `CONTRIBUTING.md`, `SECURITY.md` and `CHANGELOG.md` never mention gitleaks or checkout credentials); no hits
+
 - Related existing rules checked: the `persist-credentials: false` tests for the
   other workflows, such as `test/MarkdownLintWorkflow.ts`, which issues #61–#64
   added. This change follows the same pattern.
