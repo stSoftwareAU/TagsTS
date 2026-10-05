@@ -9,7 +9,8 @@ name: Semgrep
 
 on:
   pull_request:
-    branches: ["*"]
+    # "**" also matches milestone/<slug>; "*" stops at "/" (Issue #67).
+    branches: ["**"]
 
 permissions:
   contents: read

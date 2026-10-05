@@ -78,3 +78,36 @@ Deno.test("semgrep workflow checks out without persisted credentials", async () 
     );
   }
 });
+
+// Issue #67: GitHub's `*` glob does not match `/`, so a branch filter of ["*"] skips PRs into milestone/<slug>.
+function filterMatchesMilestone(branches: unknown): boolean {
+  if (branches === undefined) return true;
+  return Array.isArray(branches) &&
+    (branches.includes("**") || branches.includes("milestone/**"));
+}
+
+Deno.test("semgrep pull_request branch filter matches milestone/** branches", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+  // deno-lint-ignore no-explicit-any
+  const doc = parse(text) as any;
+
+  assert(doc.on?.pull_request, "workflow must still run on pull requests");
+  assert(
+    filterMatchesMilestone(doc.on?.pull_request?.branches),
+    "a pull_request branch filter must also match milestone/**",
+  );
+});
+
+Deno.test("milestone filter guard rejects filters that skip milestone branches", () => {
+  assertEquals(filterMatchesMilestone(["*"]), false);
+  assertEquals(filterMatchesMilestone(["Develop", "main"]), false);
+  assertEquals(filterMatchesMilestone(["milestone/*"]), false);
+  assertEquals(filterMatchesMilestone("**"), false);
+
+  assertEquals(filterMatchesMilestone(["**"]), true);
+  assertEquals(
+    filterMatchesMilestone(["Develop", "main", "milestone/**"]),
+    true,
+  );
+  assertEquals(filterMatchesMilestone(undefined), true);
+});
