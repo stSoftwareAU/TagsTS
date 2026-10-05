@@ -1,5 +1,5 @@
 // Verifies the ShellCheck GitHub Actions workflow file exists and is
-// well-formed YAML. Tracked in issue #20.
+// well-formed YAML. Tracked in issues #20 and #63.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
 
@@ -48,5 +48,21 @@ Deno.test("shellcheck workflow pins third-party actions to commit SHAs", async (
       /^[0-9a-f]{40}$/.test(ref),
       `step uses '${uses}' must be pinned to a 40-char commit SHA, not a tag/branch`,
     );
+  }
+});
+
+Deno.test("shellcheck workflow checks out without persisted credentials", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+  // deno-lint-ignore no-explicit-any
+  const doc = parse(text) as any;
+  const steps = doc.jobs.shellcheck.steps as Array<Record<string, unknown>>;
+
+  const checkouts = steps.filter((s) =>
+    typeof s.uses === "string" && s.uses.startsWith("actions/checkout@")
+  );
+  assert(checkouts.length > 0, "shellcheck job must check out the repo");
+  for (const checkout of checkouts) {
+    // deno-lint-ignore no-explicit-any
+    assertEquals((checkout.with as any)?.["persist-credentials"], false);
   }
 });
