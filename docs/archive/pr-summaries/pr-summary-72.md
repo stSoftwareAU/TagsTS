@@ -55,8 +55,30 @@ on `node24`. Every `with:` option is unchanged.
   `actionlint` was clean, and `./quality.sh` passed 88 tests with 0 failures.
 
 **Docs sweep** — grep: `node20`, `11d5960a`, `checkout@v4`, `actions/checkout`
-outside `docs/archive`, `.github` and `test`; section: none — no manual
-documents the checkout pins; no hits
+over `README.md`, `*/README.md`, `docs/` (excluding `docs/archive/`) and source
+comments; also re-ran the excluded-path words `.github` and `test`; section:
+none — no manual documents the checkout pins. Remaining hits, all still true:
+
+- `README.md:158` — still true because it describes `./quality.sh` running
+  lint, type-check, format and tests, which this change does not alter.
+- `README.md:164` — still true because the gate and the CI `Test` step still
+  run `deno test --reporter=dot`; no test runner flags changed.
+- `README.md:172` — still true because the dependency-update step in
+  `quality.yml` is untouched; only checkout pins in other workflows changed.
+- `README.md:173` — still true because it names `.github/workflows/quality.yml`
+  for `deno outdated --update --latest`, which this change does not edit.
+- `README.md:191` — still true because it names
+  `.github/workflows/markdown-lint.yml` for the `markdownlint-cli2` npm pin,
+  and that workflow is not edited here.
+- `README.md:200` — still true because actionlint still runs over
+  `.github/workflows/` via `actionlint.yml`; only its checkout SHA changed.
+- `test/MarkdownLintWorkflow.ts:42` — still true because it labels SHA
+  `34e11487…` as actions/checkout v4 (Node 20), which remains accurate.
+- `test/MarkdownLintWorkflow.ts:57` — still true because `markdown-lint.yml`
+  is deliberately left on actions/checkout v5 `93cb6efe…` (Node 24).
+- `test/QualityWorkflow.ts:223` — still true because it explains why test
+  writes are confined away from tracked files such as `.github/workflows/*`,
+  unrelated to checkout pins.
 
 - Related existing rules checked: the node20 deny check in
   `test/MarkdownLintWorkflow.ts` from issue #27. This change applies the same
