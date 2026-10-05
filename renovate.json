@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "minimumReleaseAge": "24 hours",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Issue #70: a `run:` step is not a manifest, so no built-in manager sees exact `npm install -g <pkg>@X.Y.Z` pins in .github/workflows; match them so bumps go through minimumReleaseAge like every other dependency.",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "npm\\s+(?:install|i|add)\\s+(?:(?:-g|--global)\\s+)?(?<depName>(?:@[a-z0-9-][a-z0-9-._]*/)?[a-z0-9-][a-z0-9-._]*)@(?<currentValue>\\d+\\.\\d+\\.\\d+)(?![\\w.-])"
+      ],
+      "datasourceTemplate": "npm"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Deno dependencies are governed by native Deno tooling (deno.json minimumDependencyAge), not Renovate; disable the deno manager so the two do not overlap.",
+      "matchManagers": ["deno"],
+      "enabled": false
+    }
+  ]
+}
