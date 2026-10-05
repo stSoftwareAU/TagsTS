@@ -12,9 +12,10 @@ step is not a manifest, so no dependency manager tracked that install, and the
   latest release (published 2026-09-20, well outside the 24h window), so the
   workflow file is unchanged here.
 - Adds `renovate.json` with a regex `customManagers` entry covering
-  `.github/workflows/*.y(a)ml`. It matches exact `npm install|i|add [-g|--global]
-  <pkg>@X.Y.Z` pins, with the `npm` datasource, so the pin is kept current and is
-  not left to go stale.
+  `.github/workflows/*.y(a)ml`. It matches exact
+  `npm install|i|add [-g|--global]
+  <pkg>@X.Y.Z` pins, with the `npm`
+  datasource, so the pin is kept current and is not left to go stale.
 - Sets a top-level `minimumReleaseAge: "24 hours"`, so those bumps (and any
   other Renovate bump) serve the quarantine.
 - Disables Renovate's `deno` manager, because Deno dependencies are governed by
@@ -66,8 +67,8 @@ flowchart LR
 
 - No Renovate PR has been opened on this repo (nor on VibeCoder or
   GRQ-actual-validation) by `app/renovate`. Whether the Renovate app is enabled
-  for the org is a GitHub App installation setting that this run cannot see.
-  The config is ready for when it is enabled.
+  for the org is a GitHub App installation setting that this run cannot see. The
+  config is ready for when it is enabled.
 - `quality.sh` formats only `src test ./*.ts`, so `renovate.json` was formatted
   once by hand with `deno fmt`.
 
@@ -78,8 +79,9 @@ Backend/CI configuration only: there is no web surface to screenshot.
 - Red on base (before `renovate.json` existed):
   `deno test -A test/RenovateConfig.ts` → `FAILED | 0 passed | 5 failed`
   (`NotFound … readfile 'renovate.json'`).
-- Green after: `deno test -A test/RenovateConfig.ts test/MarkdownLintWorkflow.ts`
-  → `ok | 14 passed | 0 failed`.
+- Green after:
+  `deno test -A test/RenovateConfig.ts test/MarkdownLintWorkflow.ts` →
+  `ok | 14 passed | 0 failed`.
 - `./quality.sh < /dev/null` → `ok | 75 passed | 0 failed`, exit 0.
 
 Docs sweep: grep of `README.md`, `CONTRIBUTING.md`, `SECURITY.md`,
@@ -96,7 +98,8 @@ install or dependency tooling, so there was nothing to update.
   - Exactly one match in the real workflow: `markdownlint-cli2` at the version
     the workflow pins.
   - No match for unpinned, `@latest` or `@^` range installs.
-  - Matches a scoped package (`@scope/pkg@1.2.3`) and the `npm i --global` alias.
+  - Matches a scoped package (`@scope/pkg@1.2.3`) and the `npm i --global`
+    alias.
 - Mutations, each confirmed red then restored:
   - Requiring a leading `@` in `depName` turns 2 tests red.
   - Changing `managerFilePatterns` to `/^src/` turns 1 test red.
