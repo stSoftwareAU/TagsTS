@@ -43,12 +43,13 @@ therefore never matched `"*"`, and its sub-issue PRs skipped the secrets scan.
 - `deno fmt --check`, `deno lint`, `deno check test/GitleaksWorkflow.ts` and
   `actionlint .github/workflows/gitleaks.yml` all passed cleanly.
 - `./quality.sh < /dev/null`: `ok | 72 passed | 0 failed`, exit 0.
-- **Docs sweep** — grep: `gitleaks`, `gitleaks.yml`, `milestone`, `base_ref`,
-  "secret" (README.md, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md, docs/
-  excluding docs/archive/, every `*/README.md`); section: none — no manual
-  documents the gitleaks workflow or its branch filter (README `#workflow-lint`
-  covers only actionlint, CONTRIBUTING `#quality-gate` covers only
-  `quality.yml`, and both were read through and stay true); no hits
+- **Docs sweep** — grep: `gitleaks`, `milestone`; section: none — no manual
+  documents the gitleaks workflow or its branch filter. Also grepped
+  `gitleaks.yml`, `base_ref` and "secret" across README.md, CONTRIBUTING.md,
+  SECURITY.md, CHANGELOG.md, docs/ (excluding docs/archive/) and every
+  `*/README.md`. README `#workflow-lint` covers only actionlint and CONTRIBUTING
+  `#quality-gate` covers only `quality.yml`; both were read through and stay
+  true; no hits
 
 ## Test Plan
 
