@@ -85,7 +85,7 @@ Backend/CI configuration only: there is no web surface to screenshot.
 - `./quality.sh < /dev/null` → `ok | 75 passed | 0 failed`, exit 0.
 
 **Docs sweep** — grep: `renovate`, `markdownlint`, `minimumReleaseAge`,
-`minimumDependencyAge`, "quarantine", "dependenc"; section:
+`minimumDependencyAge`, "quarantine", "dependency"; section:
 `README.md#dependency-quarantine`; updated: `README.md`
 
 The name greps (`renovate`, `markdownlint`, `minimumReleaseAge`) had no hits in
