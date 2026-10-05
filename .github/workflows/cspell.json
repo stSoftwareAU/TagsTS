@@ -28,6 +28,7 @@
     "shellcheck",
     "softprops",
     "stsoftware",
+    "tagless",
     "unquarantined"
   ],
   "flagWords": [
