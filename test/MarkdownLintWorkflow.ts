@@ -296,3 +296,45 @@ Deno.test("denoCacheProblems: flags cache step placed after check-mermaid", () =
   steps.push(cacheStep);
   assert(denoCacheProblems(steps).length > 0);
 });
+
+Deno.test("denoCacheProblems: flags no denoland/setup-deno step at all", () => {
+  const steps = validDenoCacheSteps();
+  steps.splice(0, 1);
+  assert(
+    denoCacheProblems(steps).includes("no denoland/setup-deno step found"),
+  );
+});
+
+Deno.test("denoCacheProblems: flags cache step placed before the setup-deno step", () => {
+  const steps = validDenoCacheSteps();
+  const cacheStep = steps.splice(1, 1)[0];
+  steps.unshift(cacheStep);
+  assert(
+    denoCacheProblems(steps).includes(
+      "cache step must come after the setup-deno step",
+    ),
+  );
+});
+
+Deno.test("denoCacheProblems: flags a cache path other than ~/.cache/deno", () => {
+  const steps = validDenoCacheSteps();
+  // deno-lint-ignore no-explicit-any
+  (steps[1].with as any).path = "~/.deno";
+  assert(
+    denoCacheProblems(steps).includes(
+      "cache step's with.path must be ~/.cache/deno, got ~/.deno",
+    ),
+  );
+});
+
+Deno.test("denoCacheProblems: flags a key missing runner.os", () => {
+  const steps = validDenoCacheSteps();
+  // deno-lint-ignore no-explicit-any
+  (steps[1].with as any).key =
+    "deno-${{ steps.setup-deno.outputs.deno-version }}-${{ hashFiles('deno.json') }}";
+  assert(
+    denoCacheProblems(steps).includes(
+      "cache step's with.key must include runner.os",
+    ),
+  );
+});

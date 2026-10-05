@@ -422,6 +422,44 @@ Deno.test("denoCacheProblems: flags cache step placed after deno outdated", () =
   assert(denoCacheProblems(steps).length > 0);
 });
 
+Deno.test("denoCacheProblems: flags no denoland/setup-deno step at all", () => {
+  const steps = validCacheFixture();
+  steps.splice(0, 1);
+  assert(
+    denoCacheProblems(steps).includes("no denoland/setup-deno step found"),
+  );
+});
+
+Deno.test("denoCacheProblems: flags cache step placed before the setup-deno step", () => {
+  const steps = validCacheFixture();
+  const [cacheStep] = steps.splice(1, 1);
+  steps.unshift(cacheStep);
+  assert(
+    denoCacheProblems(steps).includes(
+      "cache step must come after the setup-deno step",
+    ),
+  );
+});
+
+Deno.test("denoCacheProblems: flags a cache path other than ~/.cache/deno", () => {
+  const steps = validCacheFixture();
+  steps[1].with.path = "~/.deno";
+  assert(
+    denoCacheProblems(steps).includes(
+      "cache step 'with.path' must be '~/.cache/deno', got '~/.deno'",
+    ),
+  );
+});
+
+Deno.test("denoCacheProblems: flags a key missing runner.os", () => {
+  const steps = validCacheFixture();
+  steps[1].with.key =
+    "deno-${{ runner.arch }}-${{ steps.setup-deno.outputs.deno-version }}-${{ hashFiles('deno.json') }}";
+  assert(
+    denoCacheProblems(steps).includes("cache key must include runner.os"),
+  );
+});
+
 Deno.test("quality workflow breaks every hop of the issue #38 exploit chain", async () => {
   const [doc, config] = await Promise.all([readWorkflow(), readConfig()]);
   const steps = qualitySteps(doc);
