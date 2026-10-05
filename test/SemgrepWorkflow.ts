@@ -5,6 +5,12 @@ import { parse } from "@std/yaml";
 
 const WORKFLOW_PATH = ".github/workflows/semgrep.yml";
 
+// Issue #74: a tagless digest pin gives Renovate/Dependabot no version to track; require semgrep/semgrep:X.Y.Z@sha256:<64 hex>.
+function isTaggedDigestPin(image: unknown): boolean {
+  return typeof image === "string" &&
+    /^semgrep\/semgrep:\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$/.test(image);
+}
+
 Deno.test("semgrep workflow file exists", async () => {
   const stat = await Deno.stat(WORKFLOW_PATH);
   assert(stat.isFile, `${WORKFLOW_PATH} should be a regular file`);
@@ -21,8 +27,8 @@ Deno.test("semgrep workflow parses as YAML and defines semgrep job", async () =>
 
   const image = doc.jobs.semgrep.container?.image as string;
   assert(
-    image.startsWith("semgrep/semgrep@sha256:"),
-    "container image must be pinned to a digest",
+    isTaggedDigestPin(image),
+    "container image must be pinned as semgrep/semgrep:X.Y.Z@sha256:<digest>",
   );
 
   const steps = doc.jobs.semgrep.steps as Array<Record<string, unknown>>;
@@ -95,6 +101,32 @@ Deno.test("semgrep pull_request branch filter matches milestone/** branches", as
   assert(
     filterMatchesMilestone(doc.on?.pull_request?.branches),
     "a pull_request branch filter must also match milestone/**",
+  );
+});
+
+Deno.test("tagged digest pin guard rejects tagless, floating and malformed pins", () => {
+  assertEquals(
+    isTaggedDigestPin("semgrep/semgrep@sha256:" + "a".repeat(64)),
+    false,
+  );
+  assertEquals(
+    isTaggedDigestPin("semgrep/semgrep:latest@sha256:" + "a".repeat(64)),
+    false,
+  );
+  assertEquals(isTaggedDigestPin("semgrep/semgrep:1.163.0"), false);
+  assertEquals(
+    isTaggedDigestPin("semgrep/semgrep:1.163.0@sha256:" + "a".repeat(63)),
+    false,
+  );
+  assertEquals(
+    isTaggedDigestPin("semgrep/semgrep:1.163.0@sha256:" + "A".repeat(64)),
+    false,
+  );
+  assertEquals(isTaggedDigestPin(undefined), false);
+
+  assertEquals(
+    isTaggedDigestPin("semgrep/semgrep:1.163.0@sha256:" + "a".repeat(64)),
+    true,
   );
 });
 
