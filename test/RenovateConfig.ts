@@ -30,7 +30,9 @@ function compileFilePattern(pattern: string): RegExp {
     pattern.startsWith("/") && pattern.endsWith("/"),
     `expected a /…/ regex literal, got: ${pattern}`,
   );
-  return new RegExp(pattern.slice(1, -1));
+  // The pattern is a managerFilePatterns entry read from renovate.json under
+  // test, not user-controlled input, so there's no ReDoS surface here.
+  return new RegExp(pattern.slice(1, -1)); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
 }
 
 interface MatchGroups {
@@ -43,7 +45,9 @@ interface MatchGroups {
 function collectMatches(matchStrings: string[], text: string): MatchGroups[] {
   const matches: MatchGroups[] = [];
   for (const pattern of matchStrings) {
-    const re = new RegExp(pattern, "g");
+    // The pattern is a matchStrings entry read from renovate.json under
+    // test, not user-controlled input, so there's no ReDoS surface here.
+    const re = new RegExp(pattern, "g"); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
     for (const match of text.matchAll(re)) {
       const groups = match.groups ?? {};
       matches.push({
