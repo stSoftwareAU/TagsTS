@@ -6,6 +6,9 @@
 //
 // Also verifies the workflow pins gitleaks-action to the expected
 // release. Tracked in issue #68.
+//
+// Also verifies the checkout step does not persist the GITHUB_TOKEN into
+// .git/config. Tracked in issue #71.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
 
@@ -204,4 +207,87 @@ Deno.test("gitleaks workflow pins gitleaks-action to the expected release", asyn
     sha: EXPECTED_SHA,
     comment: EXPECTED_TAG,
   });
+});
+
+/**
+ * Returns the `uses` of every actions/checkout step in `steps` that does not
+ * set `persist-credentials: false`, so the token is not left in .git/config.
+ */
+export function checkoutsPersistingCredentials(
+  steps: Array<Record<string, unknown>>,
+): string[] {
+  return steps
+    .filter((step) =>
+      typeof step.uses === "string" && step.uses.startsWith("actions/checkout@")
+    )
+    .filter((step) =>
+      (step.with as Record<string, unknown> | undefined)?.[
+        "persist-credentials"
+      ] !== false
+    )
+    .map((step) => step.uses as string);
+}
+
+Deno.test("checkoutsPersistingCredentials flags checkout steps missing persist-credentials: false", () => {
+  assertEquals(
+    checkoutsPersistingCredentials([
+      {
+        uses: "actions/checkout@" + "a".repeat(40),
+        with: { "fetch-depth": 0, "persist-credentials": false },
+      },
+    ]),
+    [],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      {
+        uses: "actions/checkout@" + "b".repeat(40),
+        with: { "fetch-depth": 0 },
+      },
+    ]),
+    ["actions/checkout@" + "b".repeat(40)],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      { uses: "actions/checkout@" + "c".repeat(40) },
+    ]),
+    ["actions/checkout@" + "c".repeat(40)],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      {
+        uses: "actions/checkout@" + "d".repeat(40),
+        with: { "persist-credentials": true },
+      },
+    ]),
+    ["actions/checkout@" + "d".repeat(40)],
+  );
+
+  assertEquals(
+    checkoutsPersistingCredentials([
+      { uses: "gitleaks/gitleaks-action@" + "e".repeat(40) },
+      { run: "echo" },
+    ]),
+    [],
+  );
+});
+
+Deno.test("gitleaks job checks out without persisted credentials, keeping full history", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+  // deno-lint-ignore no-explicit-any
+  const doc = parse(text) as any;
+  const steps = doc.jobs.gitleaks.steps as Array<Record<string, unknown>>;
+
+  const checkoutStep = steps.find((s) =>
+    typeof s.uses === "string" && s.uses.startsWith("actions/checkout@")
+  );
+  assert(checkoutStep, "actions/checkout step must be present");
+
+  assertEquals(checkoutsPersistingCredentials(steps), []);
+
+  const withBlock = checkoutStep!.with as Record<string, unknown>;
+  assertEquals(withBlock["fetch-depth"], 0);
 });

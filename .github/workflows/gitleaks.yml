@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
+          persist-credentials: false
       # Fetch the PR base branch so gitleaks-action's computed commit
       # range (`<base_sha>^..<head_sha>`) resolves on the runner.
       # Without this step the action fails with
