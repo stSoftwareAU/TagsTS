@@ -186,6 +186,14 @@ update immediately.
 Do not pass `--min-dep-age` on the command line in CI — the flag overrides
 `deno.json` and would disable the quarantine.
 
+Tools that CI installs from a workflow `run:` step (such as
+`npm install -g markdownlint-cli2@X.Y.Z` in
+`.github/workflows/markdown-lint.yml`) are not in `deno.json`, so they are
+pinned to an exact version instead. `renovate.json` has a regex `customManagers`
+entry that finds those pins and bumps them, with a top-level `minimumReleaseAge`
+of 24 hours. That gives them the same quarantine. Renovate's `deno` manager is
+disabled, so it does not overlap with `minimumDependencyAge`.
+
 ### Workflow lint
 
 Every pull request runs [actionlint](https://github.com/rhysd/actionlint) over
