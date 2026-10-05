@@ -9,7 +9,9 @@ name: Gitleaks
 
 on:
   pull_request:
-    branches: ["*"]
+    # "*" does not match "/", so milestone/* is listed explicitly to
+    # ensure milestone sub-issue PRs are scanned (Issue #65).
+    branches: ["*", "milestone/*"]
 
 permissions:
   contents: read
