@@ -51,9 +51,23 @@ flowchart LR
     V -- no --> F["offender: file: job → test fails"]
 ```
 
-**Docs sweep** — grep: `timeout`, `360-minute`, `runs-on` across `README.md`,
-`CONTRIBUTING.md`, `SECURITY.md` and `CHANGELOG.md` (`docs/` holds only
-`archive/`); section: none — no manual documents per-job CI settings; no hits.
+**Docs sweep** — grep: `timeout`, `360-minute`, `runs-on` over the root manuals
+(README, CONTRIBUTING, SECURITY, CHANGELOG) and test header comments, re-run on
+the final head; section: none, because no manual documents per-job CI settings.
+That grep has no hits. The worker also matched the manuals' file names, and
+these hits were read and left unchanged:
+
+- `README.md:167` — still true because CONTRIBUTING.md still describes the
+  branch model and automatic version bump; job timeouts change neither.
+- `README.md:168` — still true because CHANGELOG.md still holds the release
+  notes; this CI-only change adds no released behaviour.
+- `README.md:243` — still true because SECURITY.md's reporting route, response
+  times and supported versions are untouched by workflow timeouts.
+- `test/ReadmeExamples.ts:1` — still true because the README code snippets it
+  verifies are unchanged.
+- `test/ContributingDocs.ts:1` — still true because CONTRIBUTING.md and
+  CHANGELOG.md still match the workflow triggers and package version it checks;
+  adding `timeout-minutes` changes neither.
 
 ## Test Plan
 
@@ -68,7 +82,8 @@ flowchart LR
   `every workflow job sets timeout-minutes` failed and listed all 10 offending
   jobs. With the change applied, it passes.
 - No existing test was edited, so no assertions were removed.
-- `./quality.sh < /dev/null` on the head: `ok | 92 passed | 0 failed`.
+- `./quality.sh < /dev/null` on the head: `ok | 121 passed | 0 failed` (after
+  merging `Develop`).
 
 **Branch outcomes:**
 
