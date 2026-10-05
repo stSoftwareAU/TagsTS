@@ -107,10 +107,7 @@ const ACTION = "gitleaks/gitleaks-action";
 const EXPECTED_SHA = "e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e";
 const EXPECTED_TAG = "v3.0.0";
 
-/** Escapes `text` for use inside a `RegExp`. */
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 /**
  * Scans `text` for a `- uses: <action>@<40-hex-sha>` line and returns the
@@ -121,24 +118,21 @@ export function actionPin(
   text: string,
   action: string,
 ): { sha: string; comment: string | undefined } | undefined {
-  const usesPattern = new RegExp(
-    `^- uses: ${escapeRegExp(action)}@([0-9a-f]{40})$`,
-  );
-  const commentPattern = new RegExp(
-    `^# ${escapeRegExp(action)}@(.+)$`,
-  );
+  const usesPrefix = `- uses: ${action}@`;
+  const commentPrefix = `# ${action}@`;
 
   const lines = text.split("\n").map((line) => line.trim());
   for (let i = 0; i < lines.length; i++) {
-    const match = usesPattern.exec(lines[i]);
-    if (!match) continue;
+    const line = lines[i];
+    if (!line.startsWith(usesPrefix)) continue;
+    const sha = line.slice(usesPrefix.length);
+    if (!SHA_PATTERN.test(sha)) continue;
 
     const previous = i > 0 ? lines[i - 1] : "";
-    const commentMatch = commentPattern.exec(previous);
-    return {
-      sha: match[1],
-      comment: commentMatch ? commentMatch[1] : undefined,
-    };
+    const comment = previous.startsWith(commentPrefix)
+      ? previous.slice(commentPrefix.length)
+      : undefined;
+    return { sha, comment };
   }
   return undefined;
 }
