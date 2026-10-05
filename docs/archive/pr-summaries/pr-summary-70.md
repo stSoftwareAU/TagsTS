@@ -58,13 +58,13 @@ flowchart LR
 - **The match string accepts only exact `X.Y.Z` pins.** A trailing terminator
   `(?:[^\w.-]|$)` stops a pre-release or a longer version from being
   half-captured. Floating installs (`pkg`, `pkg@latest`, `pkg@^X.Y.Z`) are not
-  matched, so Renovate never "manages" an unpinned install. An earlier
-  revision used a negative look-ahead (`(?![\w.-])`) here; Renovate compiles
+  matched, so Renovate never "manages" an unpinned install. An earlier revision
+  used a negative look-ahead (`(?![\w.-])`) here; Renovate compiles
   `matchStrings` with RE2 on the hosted app, and RE2 rejects look-around, so
-  that version would have made Renovate reject the whole config (review
-  finding on PR #98). The terminator consumes one trailing character (or end
-  of string) instead, which `matchStrings`' auto-replace tolerates because it
-  only rewrites the named `currentValue` group.
+  that version would have made Renovate reject the whole config (review finding
+  on PR #98). The terminator consumes one trailing character (or end of string)
+  instead, which `matchStrings`' auto-replace tolerates because it only rewrites
+  the named `currentValue` group.
 - **The test executes the real regexes.** It compiles them from the real
   `renovate.json` and runs them on the real workflow text, rather than matching
   the config's source text. A further test asserts none of the patterns use a
@@ -122,8 +122,8 @@ that `renovate.json`'s `customManagers` entry bumps them behind a 24h
 - Mutations, each confirmed red then restored:
   - Requiring a leading `@` in `depName` turns 2 tests red.
   - Changing `managerFilePatterns` to `/^src/` turns 1 test red.
-  - Reverting the trailing terminator to the old `(?![\w.-])` look-ahead
-    turns the new RE2-safety test red (review finding on PR #98).
+  - Reverting the trailing terminator to the old `(?![\w.-])` look-ahead turns
+    the new RE2-safety test red (review finding on PR #98).
 
 Branch outcomes: none added. The change is a configuration file and tests, with
 no new production branch.
