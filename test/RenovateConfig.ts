@@ -131,6 +131,29 @@ Deno.test("renovate.json customManager ignores unpinned or range-pinned npm inst
   }
 });
 
+// Renovate compiles matchStrings/managerFilePatterns with RE2 (node-re2) on
+// the hosted app, which rejects look-around and backreferences even though
+// Deno's `new RegExp` above accepts them happily. Named groups such as
+// `(?<depName>` are RE2-safe and must not trip this check.
+const RE2_UNSAFE_CONSTRUCT = /\(\?[=!]|\(\?<[=!]|\\[1-9]/;
+
+Deno.test("renovate.json customManager patterns avoid RE2-incompatible constructs", async () => {
+  const config = await loadRenovateConfig();
+  const manager = findRegexCustomManager(config);
+  const patterns: string[] = [
+    ...manager.matchStrings,
+    ...manager.managerFilePatterns,
+  ];
+
+  for (const pattern of patterns) {
+    assert(
+      !RE2_UNSAFE_CONSTRUCT.test(pattern),
+      `pattern uses a look-around or backreference RE2 cannot compile, so ` +
+        `Renovate would reject the whole config: ${pattern}`,
+    );
+  }
+});
+
 Deno.test("renovate.json customManager matches scoped packages and npm i/add aliases", async () => {
   const config = await loadRenovateConfig();
   const manager = findRegexCustomManager(config);
