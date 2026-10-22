@@ -191,23 +191,79 @@ Deno.test("usesNode20GhRelease accepts node24 and unrelated actions", () => {
   );
 });
 
-Deno.test("no workflow pins softprops/action-gh-release to node20", async () => {
-  const files = await workflowFiles();
-  assert(files.length > 0, `no workflows found in ${WORKFLOW_DIR}`);
-
+/**
+ * Scan one parsed workflow for softprops/action-gh-release references.
+ * `checked` counts every such reference; `offenders` lists the node20 ones.
+ */
+export function scanGhRelease(
+  file: string,
+  doc: unknown,
+): { checked: number; offenders: string[] } {
   let checked = 0;
   const offenders: string[] = [];
-  for (const file of files) {
-    for (const uses of usesRefs(parse(await Deno.readTextFile(file)))) {
-      const [action, ref] = uses.split("@");
-      if (action !== "softprops/action-gh-release") continue;
-      checked++;
-      const tag = NODE20_GH_RELEASE_SHAS.get(ref ?? "");
-      if (usesNode20GhRelease(uses)) {
-        offenders.push(`${file}: ${uses} (${tag})`);
-      }
+  for (const uses of usesRefs(doc)) {
+    const [action, ref] = uses.split("@");
+    if (action !== "softprops/action-gh-release") continue;
+    checked++;
+    if (usesNode20GhRelease(uses)) {
+      offenders.push(`${file}: ${uses} (${NODE20_GH_RELEASE_SHAS.get(ref)})`);
     }
   }
+  return { checked, offenders };
+}
+
+/** Aggregate `scanGhRelease` over workflow texts keyed by file name. */
+export function scanGhReleaseFiles(
+  texts: ReadonlyMap<string, string>,
+): { checked: number; offenders: string[] } {
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const [file, text] of texts) {
+    const result = scanGhRelease(file, parse(text));
+    checked += result.checked;
+    offenders.push(...result.offenders);
+  }
+  return { checked, offenders };
+}
+
+const FIXTURE_NODE20 = `
+jobs:
+  a:
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
+`;
+const FIXTURE_NODE24 = `
+jobs:
+  b:
+    steps:
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
+`;
+
+Deno.test("scanGhReleaseFiles reports node20 pins and counts only gh-release refs", () => {
+  assertEquals(
+    scanGhReleaseFiles(
+      new Map([["n20.yml", FIXTURE_NODE20], ["n24.yml", FIXTURE_NODE24]]),
+    ),
+    {
+      checked: 2,
+      offenders: [
+        "n20.yml: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 (v2.6.2)",
+      ],
+    },
+  );
+  assertEquals(scanGhReleaseFiles(new Map([["empty.yml", "jobs: {}"]])), {
+    checked: 0,
+    offenders: [],
+  });
+});
+
+Deno.test("no workflow pins softprops/action-gh-release to node20", async () => {
+  const texts = new Map<string, string>();
+  for (const file of await workflowFiles()) {
+    texts.set(file, await Deno.readTextFile(file));
+  }
+  const { checked, offenders } = scanGhReleaseFiles(texts);
 
   assert(
     checked > 0,
