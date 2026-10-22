@@ -39,12 +39,12 @@ pinned as `rhysd/actionlint@sha256:<digest>` with no tag, and Renovate's
 - `test/RenovateConfig.ts`: six new tests cover the docker manager (shape, real
   workflow capture, negative refs, RE2 safety, file pattern, and no overlap with
   the npm manager).
-- The real-workflow capture test derives the expected version from the
-  workflow text (`pinned[1]`) rather than typing `1.7.12`, so a Renovate bump
-  PR keeps CI green; the semver-format assertion stays.
+- The real-workflow capture test derives the expected version from the workflow
+  text (`pinned[1]`) rather than typing `1.7.12`, so a Renovate bump PR keeps CI
+  green; the semver-format assertion stays.
 - Flips: deleting `currentDigest: groups.currentDigest` in `collectMatches`
-  (`test/RenovateConfig.ts:72`) turned the real-workflow capture test red; changing the guard test's final
-  expected `true` to `false` turned it red.
+  (`test/RenovateConfig.ts:72`) turned the real-workflow capture test red;
+  changing the guard test's final expected `true` to `false` turned it red.
 
 **Branch outcomes:**
 
@@ -76,23 +76,42 @@ The mutation tool reports survivors only in test files
 (`test/ActionlintWorkflow.ts` and `test/RenovateConfig.ts`) with "no test
 imports this module": a test file is not imported by another test, so mutating
 its assertions cannot be observed by the harness. Run directly, these mutations
-do go red (see Flips above). Harness search: `grep -rn "RenovateConfig\|ActionlintWorkflow" test/`
-finds no importer; each file is a leaf test entry point.
+do go red (see Flips above). Harness search:
+`grep -rn "RenovateConfig\|ActionlintWorkflow" test/` finds no importer; each
+file is a leaf test entry point.
 
-- `test/RenovateConfig.ts:37` exempt (untestable): `return manager` of the test helper `findDockerCustomManager`; no test imports the file
-- `test/RenovateConfig.ts:72` exempt (untestable): `currentDigest: groups.currentDigest` in test helper `collectMatches`; deleting it turns the real-workflow capture test red when run directly
-- `test/RenovateConfig.ts:200` exempt (untestable): assertion inside a test body; no module imports it
-- `test/RenovateConfig.ts:201` exempt (untestable): assertion inside a test body; no module imports it
-- `test/RenovateConfig.ts:216` exempt (untestable): assertion inside a test body; no module imports it
-- `test/RenovateConfig.ts:223` exempt (untestable): assertion inside a test body; no module imports it
-- `test/RenovateConfig.ts:308` exempt (untestable): assertion inside a test body; no module imports it
-- `test/RenovateConfig.ts:309` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:91` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:95` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:96` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:97` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:101` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:105` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:109` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:113` exempt (untestable): assertion inside a test body; no module imports it
-- `test/ActionlintWorkflow.ts:115` exempt (untestable): assertion inside a test body; no module imports it
+- `test/RenovateConfig.ts:37` exempt (untestable): `return manager` of the test
+  helper `findDockerCustomManager`; no test imports the file
+- `test/RenovateConfig.ts:72` exempt (untestable):
+  `currentDigest: groups.currentDigest` in test helper `collectMatches`;
+  deleting it turns the real-workflow capture test red when run directly
+- `test/RenovateConfig.ts:200` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/RenovateConfig.ts:201` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/RenovateConfig.ts:216` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/RenovateConfig.ts:223` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/RenovateConfig.ts:308` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/RenovateConfig.ts:309` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:91` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:95` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:96` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:97` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:101` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:105` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:109` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:113` exempt (untestable): assertion inside a test
+  body; no module imports it
+- `test/ActionlintWorkflow.ts:115` exempt (untestable): assertion inside a test
+  body; no module imports it
