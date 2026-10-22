@@ -1,7 +1,7 @@
 // Verifies the spellcheck workflow runs with a least-privilege GITHUB_TOKEN
 // rather than the repository's broad default scopes (issue #59), and that its
 // cspell-action step is pinned to a commit SHA on a node24 release (issue #104).
-import { assert, assertEquals, assertMatch } from "@std/assert";
+import { assert, assertEquals, assertMatch, assertThrows } from "@std/assert";
 import { parse } from "@std/yaml";
 
 const WORKFLOW_PATH = ".github/workflows/spellcheck.yaml";
@@ -41,10 +41,58 @@ Deno.test("spellcheck job checks out without persisted credentials", async () =>
   assertEquals((checkout.with as any)?.["persist-credentials"], false);
 });
 
-Deno.test("spellcheck job runs cspell-action pinned to a commit SHA", async () => {
-  const step = cspellStep(await loadWorkflow());
+// deno-lint-ignore no-explicit-any
+function checkCspellPinnedToSha(doc: any): void {
+  const step = cspellStep(doc);
   assert(step, "job must run cspell-action");
   assertMatch(step.uses, /^streetsidesoftware\/cspell-action@[0-9a-f]{40}$/);
+}
+
+// deno-lint-ignore no-explicit-any
+function checkCspellInputs(doc: any): void {
+  const step = cspellStep(doc);
+  assert(step, "job must run cspell-action");
+  assertEquals(step.with?.files, "**/*.{md,html,js,ts,css}");
+  assertEquals(step.with?.config, ".github/workflows/cspell.json");
+}
+
+function docWithCspellStep(step?: Record<string, unknown>) {
+  return {
+    jobs: {
+      spellcheck: {
+        steps: [
+          { uses: "actions/checkout@" + "a".repeat(40) },
+          ...(step ? [step] : []),
+        ],
+      },
+    },
+  };
+}
+
+const CSPELL_SHA_USES = "streetsidesoftware/cspell-action@" + "b".repeat(40);
+const CSPELL_INPUTS = {
+  files: "**/*.{md,html,js,ts,css}",
+  config: ".github/workflows/cspell.json",
+};
+
+Deno.test("spellcheck job runs cspell-action pinned to a commit SHA", async () => {
+  checkCspellPinnedToSha(await loadWorkflow());
+});
+
+Deno.test("cspell pin check rejects a missing step and tag or branch refs", () => {
+  assertThrows(
+    () => checkCspellPinnedToSha(docWithCspellStep()),
+    Error,
+    "job must run cspell-action",
+  );
+  for (const ref of ["v9", "main", "b".repeat(39)]) {
+    assertThrows(() =>
+      checkCspellPinnedToSha(
+        docWithCspellStep({ uses: `streetsidesoftware/cspell-action@${ref}` }),
+      )
+    );
+  }
+  checkCspellPinnedToSha(docWithCspellStep({ uses: CSPELL_SHA_USES }));
 });
 
 Deno.test("spellcheck cspell-action version comment names major version 8 or later", async () => {
@@ -63,8 +111,32 @@ Deno.test("spellcheck cspell-action version comment names major version 8 or lat
 });
 
 Deno.test("spellcheck cspell-action step keeps its files and config inputs", async () => {
-  const step = cspellStep(await loadWorkflow());
-  assert(step, "job must run cspell-action");
-  assertEquals(step.with?.files, "**/*.{md,html,js,ts,css}");
-  assertEquals(step.with?.config, ".github/workflows/cspell.json");
+  checkCspellInputs(await loadWorkflow());
+});
+
+Deno.test("cspell inputs check rejects a missing step and changed inputs", () => {
+  assertThrows(
+    () => checkCspellInputs(docWithCspellStep()),
+    Error,
+    "job must run cspell-action",
+  );
+  assertThrows(() =>
+    checkCspellInputs(
+      docWithCspellStep({
+        uses: CSPELL_SHA_USES,
+        with: { ...CSPELL_INPUTS, files: "**/*.md" },
+      }),
+    )
+  );
+  assertThrows(() =>
+    checkCspellInputs(
+      docWithCspellStep({
+        uses: CSPELL_SHA_USES,
+        with: { ...CSPELL_INPUTS, config: "other.json" },
+      }),
+    )
+  );
+  checkCspellInputs(
+    docWithCspellStep({ uses: CSPELL_SHA_USES, with: CSPELL_INPUTS }),
+  );
 });

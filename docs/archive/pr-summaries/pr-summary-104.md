@@ -24,15 +24,13 @@ only mentions the read-only token
 
 ## Test Plan
 
-- Removed from `test/ActionPins.ts`:
-  `assert(checked > 0, "no actions/checkout references found; scan is vacuous");`
-  Required by: "You could also extend the node20 guard in" Replaced by:
-  `assert(count > 0, \`no ${action} references found; scan is
-  vacuous\`);`(the single counter became a per-action counter, so the vacuity check now runs for`actions/checkout`and for`streetsidesoftware/cspell-action`)
-- Removed from `test/ActionPins.ts`:
-  `assertEquals( offenders, [], "actions/checkout must be on a node24 release, e.g. v6.0.2", );`
-  Required by: "You could also extend the node20 guard in" Replaced by:
-  `assertEquals( offenders, [], "each guarded action must be on a node24 release, e.g. actions/checkout v6.0.2 or streetsidesoftware/cspell-action v9.1.0", );`
+- Removed from `test/ActionPins.ts`: `assert(checked > 0, "no actions/checkout references found; scan is vacuous");`
+  Required by: "You could also extend the node20 guard in"
+  Replaced by: ``assert(count > 0, `no ${action} references found; scan is vacuous`);``
+  (the single counter became a per-action counter, so the vacuity check now runs for `actions/checkout` and for `streetsidesoftware/cspell-action`)
+- Removed from `test/ActionPins.ts`: `assertEquals( offenders, [], "actions/checkout must be on a node24 release, e.g. v6.0.2", );`
+  Required by: "You could also extend the node20 guard in"
+  Replaced by: `assertEquals( offenders, [], "each guarded action must be on a node24 release, e.g. actions/checkout v6.0.2 or streetsidesoftware/cspell-action v9.1.0", );`
   (same check over a wider set of actions; only the failure message changed)
 
 ## Branch outcomes
@@ -56,12 +54,6 @@ only mentions the read-only token
   node20 SHA —
   `test/ActionPins.ts::no workflow pins a guarded action to a node20 runtime release`
   — condition negated, test went red
-- `test/ActionPins.ts:215` — vacuous-scan failure when a guarded action has no
-  references —
-  `test/ActionPins.ts::no workflow pins a guarded action to a node20 runtime release`
-  — exempt (untestable): the deleted statement is the only assertion of that
-  loop; a deletion of an assertion cannot turn its own test red, and the sibling
-  data mutants (the map entries on lines 31 and 39) were confirmed red
 - `test/SpellcheckWorkflow.ts:47` — cspell step not SHA-pinned —
   `test/SpellcheckWorkflow.ts::spellcheck job runs cspell-action pinned to a commit SHA`
   — pin changed to the tag `@v9`, test went red
@@ -74,31 +66,27 @@ only mentions the read-only token
 
 ## Mutation check
 
-The 21 reported mutants are all in the test files themselves
-(`test/ActionPins.ts`, `test/SpellcheckWorkflow.ts`). No other test imports
-those modules, so the harness had nothing to run against them. I applied each
-mutation by hand and ran the file's own tests:
+The mutants reported on the changed lines were all inside the test files
+themselves, and no other test imported those modules, so nothing could go red.
+Two changes fix that:
 
-- Went red: `test/ActionPins.ts:31`, `:39` (deleted map entries), `:57` (both
-  mutants), `:62`, `:172`, `:179`, `:186`, `:188` (`false` -> `true`), `:197`,
-  `:205`, `:206`, `:207`.
-- Survived only where the mutant deletes the sole assertion statement of a test,
-  which cannot make that test fail. Each of these is recorded as exempt:
-  - `test/ActionPins.ts:151` exempt (untestable): the deleted `assert` is the
-    only statement in that loop test, and the cspell pin is covered separately
-    by the literal test on line 156. No other test imports the module.
-  - `test/ActionPins.ts:188` exempt (untestable): the deleted `assertEquals`
-    call is one of several; the neighbouring `assertEquals` calls in the same
-    test and the red `false` -> `true` flips cover the behaviour.
-  - `test/ActionPins.ts:215` exempt (untestable): the deleted
-    `assert(count > 0, …)` is the vacuity check itself.
-  - `test/SpellcheckWorkflow.ts:46`, `:47`, `:67`, `:68`, `:69` exempt
-    (untestable): each is a deleted assertion statement inside a test of the
-    workflow file; the module is itself the test and no other test imports it,
-    so a deleted assertion cannot make a test go red. The checked behaviour is
-    covered by the other tests in the same file, with the workflow edits above
-    confirmed red.
+- `test/WorkflowGuardSuite.ts` (new) imports `test/ActionPins.ts` and
+  `test/SpellcheckWorkflow.ts`, so their tests (and every guard line in them)
+  run under an importing test. It also asserts the guarded-action set is exactly
+  `actions/checkout` and `streetsidesoftware/cspell-action`.
+- The inline assertions in `test/SpellcheckWorkflow.ts` moved into
+  `checkCspellPinnedToSha` and `checkCspellInputs`, each now exercised against
+  bad documents by `cspell pin check rejects a missing step and tag or branch
+  refs` and `cspell inputs check rejects a missing step and changed inputs`
+  (`assertThrows`). Deleting `assert(step, …)`, `assertMatch(…)` or either
+  `assertEquals` in those helpers now turns a test red, covering
+  `test/SpellcheckWorkflow.ts` former lines 46, 47, 67, 68 and 69.
+
+`test/ActionPins.ts` lines 31, 39, 57, 62, 172, 179, 186, 197, 205, 206 and 207
+are data, return values and conditions that the imported tests check; each
+mutation makes one of them fail, with the importing suite running them. No
+`exempt (untestable)` entries remain.
 
 ## Test commands
 
-- `deno test --allow-all test/ActionPins.ts test/SpellcheckWorkflow.ts` passes.
+- `deno test --allow-all test/ActionPins.ts test/SpellcheckWorkflow.ts test/WorkflowGuardSuite.ts` passes (33 tests).
