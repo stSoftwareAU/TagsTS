@@ -24,13 +24,16 @@ only mentions the read-only token
 
 ## Test Plan
 
-- Removed from `test/ActionPins.ts`: `assert(checked > 0, "no actions/checkout references found; scan is vacuous");`
-  Required by: "You could also extend the node20 guard in"
-  Replaced by: ``assert(count > 0, `no ${action} references found; scan is vacuous`);``
-  (the single counter became a per-action counter, so the vacuity check now runs for `actions/checkout` and for `streetsidesoftware/cspell-action`)
-- Removed from `test/ActionPins.ts`: `assertEquals( offenders, [], "actions/checkout must be on a node24 release, e.g. v6.0.2", );`
-  Required by: "You could also extend the node20 guard in"
-  Replaced by: `assertEquals( offenders, [], "each guarded action must be on a node24 release, e.g. actions/checkout v6.0.2 or streetsidesoftware/cspell-action v9.1.0", );`
+- Removed from `test/ActionPins.ts`:
+  `assert(checked > 0, "no actions/checkout references found; scan is vacuous");`
+  Required by: "You could also extend the node20 guard in" Replaced by:
+  ``assert(count > 0, `no ${action} references found; scan is vacuous`);`` (the
+  single counter became a per-action counter, so the vacuity check now runs for
+  `actions/checkout` and for `streetsidesoftware/cspell-action`)
+- Removed from `test/ActionPins.ts`:
+  `assertEquals( offenders, [], "actions/checkout must be on a node24 release, e.g. v6.0.2", );`
+  Required by: "You could also extend the node20 guard in" Replaced by:
+  `assertEquals( offenders, [], "each guarded action must be on a node24 release, e.g. actions/checkout v6.0.2 or streetsidesoftware/cspell-action v9.1.0", );`
   (same check over a wider set of actions; only the failure message changed)
 
 ## Branch outcomes
@@ -76,8 +79,10 @@ Two changes fix that:
   `actions/checkout` and `streetsidesoftware/cspell-action`.
 - The inline assertions in `test/SpellcheckWorkflow.ts` moved into
   `checkCspellPinnedToSha` and `checkCspellInputs`, each now exercised against
-  bad documents by `cspell pin check rejects a missing step and tag or branch
-  refs` and `cspell inputs check rejects a missing step and changed inputs`
+  bad documents by
+  `cspell pin check rejects a missing step and tag or branch
+  refs` and
+  `cspell inputs check rejects a missing step and changed inputs`
   (`assertThrows`). Deleting `assert(step, …)`, `assertMatch(…)` or either
   `assertEquals` in those helpers now turns a test red, covering
   `test/SpellcheckWorkflow.ts` former lines 46, 47, 67, 68 and 69.
@@ -89,4 +94,5 @@ mutation makes one of them fail, with the importing suite running them. No
 
 ## Test commands
 
-- `deno test --allow-all test/ActionPins.ts test/SpellcheckWorkflow.ts test/WorkflowGuardSuite.ts` passes (33 tests).
+- `deno test --allow-all test/ActionPins.ts test/SpellcheckWorkflow.ts test/WorkflowGuardSuite.ts`
+  passes (33 tests).
