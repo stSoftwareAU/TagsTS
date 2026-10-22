@@ -2,7 +2,8 @@
 // workflows is pinned to an immutable 40-character commit SHA rather than a
 // mutable tag or branch (CWE-494). Tracked in issue #39. Also guards against
 // actions/checkout releases that run on the deprecated node20 Actions
-// runtime, which GitHub removed on 2026-09-16 (issue #72).
+// runtime, which GitHub removed on 2026-09-16 (issue #72). It also guards
+// softprops/action-gh-release releases that run on node20 (issue #106).
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
 
@@ -30,6 +31,22 @@ export const NODE20_CHECKOUT_SHAS: ReadonlyMap<string, string> = new Map([
 export function usesNode20Checkout(uses: string): boolean {
   const [action, ref] = uses.split("@");
   return action === "actions/checkout" && NODE20_CHECKOUT_SHAS.has(ref ?? "");
+}
+
+/**
+ * softprops/action-gh-release commit SHAs whose `action.yml` declares
+ * `using: node20`, a runtime GitHub removed on 2026-09-16 (issue #106).
+ * Verified with `gh api repos/softprops/action-gh-release/commits/<tag> --jq .sha`.
+ */
+export const NODE20_GH_RELEASE_SHAS: ReadonlyMap<string, string> = new Map([
+  ["3bb12739c298aeb8a4eeaf626c5b8d85266b0e65", "v2.6.2"],
+]);
+
+/** True when `uses` pins softprops/action-gh-release to a node20-runtime release. */
+export function usesNode20GhRelease(uses: string): boolean {
+  const [action, ref] = uses.split("@");
+  return action === "softprops/action-gh-release" &&
+    NODE20_GH_RELEASE_SHAS.has(ref ?? "");
 }
 
 /** Every `uses:` reference (step-level and job-level) in a parsed workflow. */
@@ -138,5 +155,67 @@ Deno.test("no workflow pins actions/checkout to a node20 runtime release", async
     offenders,
     [],
     "actions/checkout must be on a node24 release, e.g. v6.0.2",
+  );
+});
+
+Deno.test("usesNode20GhRelease flags the node20 v2.6.2 pin", () => {
+  assert(
+    usesNode20GhRelease(
+      "softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65",
+    ),
+  );
+  assertEquals(
+    NODE20_GH_RELEASE_SHAS.get("3bb12739c298aeb8a4eeaf626c5b8d85266b0e65"),
+    "v2.6.2",
+  );
+});
+
+Deno.test("usesNode20GhRelease accepts node24 and unrelated actions", () => {
+  assertEquals(
+    usesNode20GhRelease(
+      "softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20GhRelease(
+      "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20GhRelease(
+      "other/action@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65",
+    ),
+    false,
+  );
+});
+
+Deno.test("no workflow pins softprops/action-gh-release to node20", async () => {
+  const files = await workflowFiles();
+  assert(files.length > 0, `no workflows found in ${WORKFLOW_DIR}`);
+
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const file of files) {
+    for (const uses of usesRefs(parse(await Deno.readTextFile(file)))) {
+      const [action, ref] = uses.split("@");
+      if (action !== "softprops/action-gh-release") continue;
+      checked++;
+      const tag = NODE20_GH_RELEASE_SHAS.get(ref ?? "");
+      if (usesNode20GhRelease(uses)) {
+        offenders.push(`${file}: ${uses} (${tag})`);
+      }
+    }
+  }
+
+  assert(
+    checked > 0,
+    "no softprops/action-gh-release references found; scan is vacuous",
+  );
+  assertEquals(
+    offenders,
+    [],
+    "softprops/action-gh-release must be on a node24 release, e.g. v3.0.3",
   );
 });
