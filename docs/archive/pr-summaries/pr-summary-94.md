@@ -41,16 +41,18 @@ Every PR, including milestone sub-issue PRs, must be checked by ShellCheck.
 ## Test Plan
 
 - **Red first:** with only `.github/workflows/shellcheck.yml` reverted to the
-  base, `shellcheck workflow runs on PRs targeting Develop, main and milestone
-  branches` fails with `expected branch 'milestone/issue-94-slug' to match the
-  pull_request filter`. The other five tests pass. Restored afterwards.
+  base, the milestone test fails with the message
+  `expected branch 'milestone/issue-94-slug' to match the pull_request filter`.
+  The other five tests pass. Restored afterwards.
 - **Callers/fakes:** none. The glob matcher is test-local.
 - **Twinned rules:** `test/GitleaksWorkflow.ts` holds the same matcher. It is a
   per-file copy, as the repository's isolated workflow tests are. The helper's
   own test pins its semantics.
-- <!-- vibe-branch-outcomes -->
-  **Branch outcomes:** see `pr-summary-94.facts.json`. One outcome. Dropping
-  `"milestone/*"` turns the milestone test red.
+
+<!-- vibe-branch-outcomes -->
+
+**Branch outcomes:** see `pr-summary-94.facts.json`. One outcome: dropping the
+`milestone/*` entry turns the milestone test red.
 
 ## Security Self-Check
 
