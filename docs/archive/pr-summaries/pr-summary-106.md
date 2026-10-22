@@ -45,6 +45,7 @@ reworded to add the issue #106 sentence.
   node20" scans the real workflows and asserts `checked > 0`.
 
 **Branch outcomes:**
+
 - `test/ActionPins.ts:46` `usesNode20GhRelease` — false for another action, true
   for a node20 SHA, false for a node24 SHA —
   `test/ActionPins.ts::usesNode20GhRelease flags the node20 v2.6.2 pin` and
@@ -59,28 +60,32 @@ reworded to add the issue #106 sentence.
   both went red
 - `test/ActionPins.ts:216` `scanGhReleaseFiles` aggregation of `checked` and
   `offenders` — same test — removed each aggregation line, test went red
-- `.github/workflows/github-release.yml:40` pin — `test/ActionPins.ts::no workflow pins softprops/action-gh-release to node20`
-  — flipped back to the v2.6.2 SHA, test went red
+- `.github/workflows/github-release.yml:40` pin —
+  `test/ActionPins.ts::no workflow pins softprops/action-gh-release to node20` —
+  flipped back to the v2.6.2 SHA, test went red
 - `test/ActionPins.ts:268` vacuous-scan guard `assert(checked > 0, …)` in the
-  real-workflow test — exempt (untestable): the guard only fires when no workflow
-  references the action, which cannot be staged without deleting the release
-  workflow; the existing tests of the scan (`scanGhReleaseFiles reports node20
-  pins…`, which asserts `checked: 0` for an empty workflow) cover the counter.
+  real-workflow test — exempt (untestable): the guard only fires when no
+  workflow references the action, which cannot be staged without deleting the
+  release workflow; the existing tests of the scan
+  (`scanGhReleaseFiles reports node20
+  pins…`, which asserts `checked: 0` for
+  an empty workflow) cover the counter.
 
 **Mutation check:** the gate reported 8 survivors in `test/ActionPins.ts`, all
-"no test imports this module". The module is itself a test file that `deno test
-test/*.ts` runs directly and no other test imports it, so the gate could not
-map a test to it. I applied the mutations by hand in a scratch copy and ran the
-file; the ones that survived exposed real gaps, which I fixed by extracting
-`scanGhRelease` and `scanGhReleaseFiles` and adding fixture tests. Every
-mutation of lines the tests can reach now goes red, except:
+"no test imports this module". The module is itself a test file that
+`deno test
+test/*.ts` runs directly and no other test imports it, so the gate
+could not map a test to it. I applied the mutations by hand in a scratch copy
+and ran the file; the ones that survived exposed real gaps, which I fixed by
+extracting `scanGhRelease` and `scanGhReleaseFiles` and adding fixture tests.
+Every mutation of lines the tests can reach now goes red, except:
 
 - `test/ActionPins.ts:268` exempt (untestable): the vacuity guard, as above.
 - `test/ActionPins.ts` redundant `assert(files.length > 0)` in the new test was
   removed because `checked > 0` already covers an empty scan.
-- Any remaining mutation of an assertion line in this file is reported as
-  "no test imports this module" because the file is its own test entry point;
-  exempt (untestable): no other test imports it and none can without running its
-  tests twice.
+- Any remaining mutation of an assertion line in this file is reported as "no
+  test imports this module" because the file is its own test entry point; exempt
+  (untestable): no other test imports it and none can without running its tests
+  twice.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
