@@ -5,57 +5,9 @@
 // issue #96.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
+import { matchesBranchFilter } from "./BranchFilter.ts";
 
 const WORKFLOW_PATH = ".github/workflows/dependency-review.yml";
-
-/**
- * Mirrors GitHub Actions' filter-pattern semantics for the subset used
- * here: "**" matches any characters including "/", "*" matches any
- * characters except "/", and everything else is matched literally.
- *
- * Implemented as a backtracking matcher (no RegExp) so the glob
- * pattern never flows into a dynamically constructed regular
- * expression.
- */
-function matchesBranchFilter(branch: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => globMatch(branch, 0, pattern, 0));
-}
-
-function globMatch(
-  text: string,
-  textIndex: number,
-  pattern: string,
-  patternIndex: number,
-): boolean {
-  if (patternIndex === pattern.length) {
-    return textIndex === text.length;
-  }
-
-  if (pattern[patternIndex] !== "*") {
-    return (
-      textIndex < text.length &&
-      text[textIndex] === pattern[patternIndex] &&
-      globMatch(text, textIndex + 1, pattern, patternIndex + 1)
-    );
-  }
-
-  if (pattern[patternIndex + 1] === "*") {
-    for (let i = textIndex; i <= text.length; i++) {
-      if (globMatch(text, i, pattern, patternIndex + 2)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  for (let i = textIndex; i <= text.length; i++) {
-    if (globMatch(text, i, pattern, patternIndex + 1)) {
-      return true;
-    }
-    if (text[i] === "/") break;
-  }
-  return false;
-}
 
 Deno.test("dependency-review branch filter helper mirrors GitHub glob semantics", () => {
   assertEquals(matchesBranchFilter("milestone/foo", ["Develop"]), false);
@@ -66,6 +18,20 @@ Deno.test("dependency-review branch filter helper mirrors GitHub glob semantics"
     true,
   );
   assertEquals(matchesBranchFilter("milestone/foo", ["*"]), false);
+  // "**" crosses "/", "*" does not, and everything else is literal.
+  assertEquals(matchesBranchFilter("milestone/a/b", ["milestone/**"]), true);
+  assertEquals(matchesBranchFilter("milestone/", ["milestone/*"]), true);
+  assertEquals(matchesBranchFilter("milestone/a/b", ["**"]), true);
+  assertEquals(matchesBranchFilter("foo", ["*"]), true);
+  assertEquals(matchesBranchFilter("", ["*"]), true);
+  assertEquals(matchesBranchFilter("a/b", ["*/b"]), true);
+  assertEquals(matchesBranchFilter("a/c/b", ["*/b"]), false);
+  assertEquals(matchesBranchFilter("Develop", ["Develo"]), false);
+  assertEquals(matchesBranchFilter("Develo", ["Develop"]), false);
+  assertEquals(matchesBranchFilter("Develop", ["develop"]), false);
+  assertEquals(matchesBranchFilter("Develop", []), false);
+  assertEquals(matchesBranchFilter("milestone/x", ["milestone/**x"]), true);
+  assertEquals(matchesBranchFilter("milestone/x", ["milestone/**y"]), false);
 });
 
 Deno.test("dependency-review workflow runs on PRs targeting Develop and milestone branches", async () => {
