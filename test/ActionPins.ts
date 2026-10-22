@@ -2,7 +2,8 @@
 // workflows is pinned to an immutable 40-character commit SHA rather than a
 // mutable tag or branch (CWE-494). Tracked in issue #39. Also guards against
 // actions/checkout releases that run on the deprecated node20 Actions
-// runtime, which GitHub removed on 2026-09-16 (issue #72).
+// runtime, which GitHub removed on 2026-09-16 (issue #72), and
+// actions/dependency-review-action v4.x releases on node20 (issue #105).
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
 
@@ -30,6 +31,23 @@ export const NODE20_CHECKOUT_SHAS: ReadonlyMap<string, string> = new Map([
 export function usesNode20Checkout(uses: string): boolean {
   const [action, ref] = uses.split("@");
   return action === "actions/checkout" && NODE20_CHECKOUT_SHAS.has(ref ?? "");
+}
+
+/**
+ * actions/dependency-review-action commit SHAs whose `action.yml` declares
+ * `using: node20` (issue #105). Verified with
+ * `gh api repos/actions/dependency-review-action/commits/<tag> --jq .sha`.
+ */
+export const NODE20_DEPENDENCY_REVIEW_SHAS: ReadonlyMap<string, string> =
+  new Map([
+    ["2031cfc080254a8a887f58cffee85186f0e49e48", "v4.9.0"],
+  ]);
+
+/** True when `uses` pins actions/dependency-review-action to a node20 release. */
+export function usesNode20DependencyReview(uses: string): boolean {
+  const [action, ref] = uses.split("@");
+  return action === "actions/dependency-review-action" &&
+    NODE20_DEPENDENCY_REVIEW_SHAS.has(ref ?? "");
 }
 
 /** Every `uses:` reference (step-level and job-level) in a parsed workflow. */
@@ -138,5 +156,64 @@ Deno.test("no workflow pins actions/checkout to a node20 runtime release", async
     offenders,
     [],
     "actions/checkout must be on a node24 release, e.g. v6.0.2",
+  );
+});
+
+Deno.test("usesNode20DependencyReview flags the known node20 SHA", () => {
+  assert(
+    usesNode20DependencyReview(
+      "actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48",
+    ),
+  );
+});
+
+Deno.test("usesNode20DependencyReview accepts node24 v5.0.0 and unrelated actions", () => {
+  assertEquals(
+    usesNode20DependencyReview(
+      "actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20DependencyReview(
+      "other/action@2031cfc080254a8a887f58cffee85186f0e49e48",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20DependencyReview(
+      "actions/checkout@2031cfc080254a8a887f58cffee85186f0e49e48",
+    ),
+    false,
+  );
+  assertEquals(usesNode20DependencyReview("./.github/actions/local"), false);
+});
+
+Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime release", async () => {
+  const files = await workflowFiles();
+  assert(files.length > 0, `no workflows found in ${WORKFLOW_DIR}`);
+
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const file of files) {
+    for (const uses of usesRefs(parse(await Deno.readTextFile(file)))) {
+      const [action, ref] = uses.split("@");
+      if (action !== "actions/dependency-review-action") continue;
+      checked++;
+      const tag = NODE20_DEPENDENCY_REVIEW_SHAS.get(ref ?? "");
+      if (usesNode20DependencyReview(uses)) {
+        offenders.push(`${file}: ${uses} (${tag})`);
+      }
+    }
+  }
+
+  assert(
+    checked > 0,
+    "no actions/dependency-review-action references found; scan is vacuous",
+  );
+  assertEquals(
+    offenders,
+    [],
+    "actions/dependency-review-action must be on a node24 release, e.g. v5.0.0",
   );
 });
