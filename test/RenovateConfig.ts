@@ -12,14 +12,27 @@ async function loadRenovateConfig(): Promise<any> {
 }
 
 // deno-lint-ignore no-explicit-any
-function findRegexCustomManager(config: any, datasource = "npm"): any {
+function findRegexCustomManager(config: any): any {
   const manager = (config.customManagers ?? []).find(
     // deno-lint-ignore no-explicit-any
-    (m: any) => m.customType === "regex" && m.datasourceTemplate === datasource,
+    (m: any) => m.customType === "regex" && m.datasourceTemplate === "npm",
   );
   assert(
     manager,
-    `expected a customType=regex, datasourceTemplate=${datasource} customManagers entry`,
+    "expected a customType=regex, datasourceTemplate=npm customManagers entry",
+  );
+  return manager;
+}
+
+// deno-lint-ignore no-explicit-any
+function findDockerCustomManager(config: any): any {
+  const manager = (config.customManagers ?? []).find(
+    // deno-lint-ignore no-explicit-any
+    (m: any) => m.customType === "regex" && m.datasourceTemplate === "docker",
+  );
+  assert(
+    manager,
+    "expected a customType=regex, datasourceTemplate=docker customManagers entry",
   );
   return manager;
 }
@@ -183,14 +196,14 @@ const ACTIONLINT_DIGEST =
 
 Deno.test("renovate docker manager is a regex customManager with datasourceTemplate docker", async () => {
   const config = await loadRenovateConfig();
-  const manager = findRegexCustomManager(config, "docker");
+  const manager = findDockerCustomManager(config);
   assertEquals(manager.customType, "regex");
   assertEquals(manager.datasourceTemplate, "docker");
 });
 
 Deno.test("renovate docker manager captures the actionlint version and digest pin in the real workflow", async () => {
   const config = await loadRenovateConfig();
-  const manager = findRegexCustomManager(config, "docker");
+  const manager = findDockerCustomManager(config);
   const matchStrings: string[] = manager.matchStrings;
 
   const workflowText = await Deno.readTextFile(ACTIONLINT_WORKFLOW_PATH);
@@ -216,7 +229,7 @@ Deno.test("renovate docker manager captures the actionlint version and digest pi
 
 Deno.test("renovate docker manager ignores tagless, untagged, short-digest or range-tagged actionlint refs", async () => {
   const config = await loadRenovateConfig();
-  const manager = findRegexCustomManager(config, "docker");
+  const manager = findDockerCustomManager(config);
   const matchStrings: string[] = manager.matchStrings;
 
   // Positive control: the well-formed pin must match, so an empty result
@@ -249,7 +262,7 @@ Deno.test("renovate docker manager ignores tagless, untagged, short-digest or ra
 
 Deno.test("renovate docker manager patterns avoid RE2-incompatible constructs", async () => {
   const config = await loadRenovateConfig();
-  const manager = findRegexCustomManager(config, "docker");
+  const manager = findDockerCustomManager(config);
   const patterns: string[] = [
     ...manager.matchStrings,
     ...manager.managerFilePatterns,
@@ -266,7 +279,7 @@ Deno.test("renovate docker manager patterns avoid RE2-incompatible constructs", 
 
 Deno.test("renovate docker manager file patterns match .github/workflows/actionlint.yml", async () => {
   const config = await loadRenovateConfig();
-  const manager = findRegexCustomManager(config, "docker");
+  const manager = findDockerCustomManager(config);
   const patterns: string[] = manager.managerFilePatterns;
 
   assert(
@@ -278,7 +291,7 @@ Deno.test("renovate docker manager file patterns match .github/workflows/actionl
 Deno.test("renovate npm and docker managers do not capture each other's pins", async () => {
   const config = await loadRenovateConfig();
   const npmManager = findRegexCustomManager(config);
-  const dockerManager = findRegexCustomManager(config, "docker");
+  const dockerManager = findDockerCustomManager(config);
   const npmMatchStrings: string[] = npmManager.matchStrings;
   const dockerMatchStrings: string[] = dockerManager.matchStrings;
 
