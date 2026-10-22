@@ -189,14 +189,14 @@ Deno.test("usesNode20DependencyReview accepts node24 v5.0.0 and unrelated action
   assertEquals(usesNode20DependencyReview("./.github/actions/local"), false);
 });
 
-Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime release", async () => {
-  const files = await workflowFiles();
-  assert(files.length > 0, `no workflows found in ${WORKFLOW_DIR}`);
-
+/** Counts dependency-review-action references and lists node20 offenders. */
+export function scanDependencyReview(
+  docs: ReadonlyArray<readonly [string, unknown]>,
+): { checked: number; offenders: string[] } {
   let checked = 0;
   const offenders: string[] = [];
-  for (const file of files) {
-    for (const uses of usesRefs(parse(await Deno.readTextFile(file)))) {
+  for (const [file, doc] of docs) {
+    for (const uses of usesRefs(doc)) {
       const [action, ref] = uses.split("@");
       if (action !== "actions/dependency-review-action") continue;
       checked++;
@@ -206,6 +206,36 @@ Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime
       }
     }
   }
+  return { checked, offenders };
+}
+
+Deno.test("scanDependencyReview lists a node20 pin and counts every reference", () => {
+  const node20 = "actions/dependency-review-action@" +
+    "2031cfc080254a8a887f58cffee85186f0e49e48";
+  const node24 = "actions/dependency-review-action@" +
+    "a1d282b36b6f3519aa1f3fc636f609c47dddb294";
+  const doc = parse(
+    `jobs:\n  a:\n    steps:\n      - uses: ${node20}\n      - uses: ${node24}\n      - uses: actions/checkout@v6\n`,
+  );
+  assertEquals(scanDependencyReview([["wf.yml", doc]]), {
+    checked: 2,
+    offenders: [`wf.yml: ${node20} (v4.9.0)`],
+  });
+  assertEquals(scanDependencyReview([["empty.yml", {}]]), {
+    checked: 0,
+    offenders: [],
+  });
+});
+
+Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime release", async () => {
+  const files = await workflowFiles();
+  assert(files.length > 0, `no workflows found in ${WORKFLOW_DIR}`);
+
+  const docs: Array<readonly [string, unknown]> = [];
+  for (const file of files) {
+    docs.push([file, parse(await Deno.readTextFile(file))]);
+  }
+  const { checked, offenders } = scanDependencyReview(docs);
 
   assert(
     checked > 0,
