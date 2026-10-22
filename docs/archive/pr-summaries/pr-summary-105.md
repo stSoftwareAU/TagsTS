@@ -12,8 +12,8 @@ The `with:` options are unchanged.
 - [x] Add a node20 denylist guard for the action to `test/ActionPins.ts`
       (`NODE20_DEPENDENCY_REVIEW_SHAS`, `usesNode20DependencyReview`,
       `scanDependencyReview`) with positive, negative and fixture tests
-- [x] Add `test/ActionPinsScan.ts`, which imports `test/ActionPins.ts` and
-      tests `scanDependencyReview` directly, so mutations of that module go red
+- [x] Add `test/ActionPinsScan.ts`, which imports `test/ActionPins.ts` and tests
+      `scanDependencyReview` directly, so mutations of that module go red
 - [x] Mutation checks red, then restored
 
 ## Spec
@@ -122,8 +122,8 @@ job-level reference and ignores others".
   reference is found —
   `test/ActionPins.ts::no workflow pins actions/dependency-review-action to a node20 runtime release`;
   `test/ActionPinsScan.ts::scanDependencyReview returns an object for an empty list`
-  checks the empty-scan count directly, and deleting the `docs.push` call on
-  the real-workflow path makes the guard fail
+  checks the empty-scan count directly, and deleting the `docs.push` call on the
+  real-workflow path makes the guard fail
 - `.github/workflows/dependency-review.yml:36` — pin is node24 v5.0.0 —
   `test/ActionPins.ts::no workflow pins actions/dependency-review-action to a node20 runtime release`
   — restoring the v4.9.0 SHA goes red
@@ -145,8 +145,8 @@ Applied to a scratch copy and run with `deno test -A test/ActionPinsScan.ts`:
 - `test/ActionPins.ts:226` deleted `offenders: []` — red (same).
 - `test/ActionPins.ts:236` deleted `docs.push(...)` — red ("scan is vacuous").
 
-No line is exempted. The earlier `exempt (untestable)` entries for lines 50, 175,
-181, 187, 189, 201, 204, 205 and 232 are withdrawn: they were reachable the same
-way, and the file now runs under an importing test.
+No line is exempted. The earlier `exempt (untestable)` entries for lines 50,
+175, 181, 187, 189, 201, 204, 205 and 232 are withdrawn: they were reachable the
+same way, and the file now runs under an importing test.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
