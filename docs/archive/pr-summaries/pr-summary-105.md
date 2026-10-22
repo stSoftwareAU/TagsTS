@@ -12,6 +12,8 @@ The `with:` options are unchanged.
 - [x] Add a node20 denylist guard for the action to `test/ActionPins.ts`
       (`NODE20_DEPENDENCY_REVIEW_SHAS`, `usesNode20DependencyReview`,
       `scanDependencyReview`) with positive, negative and fixture tests
+- [x] Add `test/ActionPinsScan.ts`, which imports `test/ActionPins.ts` and
+      tests `scanDependencyReview` directly, so mutations of that module go red
 - [x] Mutation checks red, then restored
 
 ## Spec
@@ -33,7 +35,30 @@ node24 release instead of suppressing the finding.
 
 ## Evidence
 
-- `deno test -A test/ActionPins.ts`: 10 passed, 0 failed.
+- `deno test -A test/ActionPinsScan.ts`: 13 passed, 0 failed (the 10 tests of
+  `test/ActionPins.ts` plus 3 new ones, since the import runs them too).
+
+**v5.0.0 review** (checked with `gh api` on 2026-10-22):
+
+- Release: `v5.0.0` published 2026-05-08T20:23:50Z, about 5 months before this
+  change, so it is far outside the 24h quarantine (`minimumDependencyAge` is
+  `P1D`). The tag resolves to `a1d282b36b6f3519aa1f3fc636f609c47dddb294`
+  (committed 2026-05-08T20:20:49Z), the SHA now pinned.
+- Changelog (release notes, full diff `v4.9.0...v5.0.0`): "a new major version
+  ... which updates the runtime to node24" (PR #1084). Other changes are a
+  Copilot instructions file, a `spdx-license-ids` bump, docs examples moving to
+  `actions/checkout@v6`, a fix to patched-version display for non-strict semver
+  ranges, and security-finding fixes. No input or behaviour change is listed.
+  The only breaking change is a minimum Actions runner of v2.327.1, which
+  `runs-on: ubuntu-latest` (GitHub-hosted) satisfies.
+- Inputs: `action.yml` at v4.9.0 and v5.0.0 differ in exactly one line,
+  `using: 'node20'` -> `using: 'node24'` (`diff` of the two files). So every
+  input, including `comment-summary-in-pr` (the one the workflow sets to
+  `always`), is unchanged.
+- `action.yml` at `a1d282b36b6f3519aa1f3fc636f609c47dddb294` declares
+  `using: 'node24'`; at the old `2031cfc0…` it declares `using: 'node20'`.
+- The guard is a denylist and does not itself prove the new SHA is node24; that
+  was verified here by reading `action.yml`, as above.
 
 **Docs sweep** — grep: `node20`, `dependency-review`, `2031cfc0` over
 `README.md`, `CONTRIBUTING.md`, `SECURITY.md` and `docs/` (excluding
@@ -64,6 +89,10 @@ New tests, all in `test/ActionPins.ts`:
   release" parses every real workflow and asserts no offenders and
   `checked > 0`.
 
+New tests in `test/ActionPinsScan.ts`: "scanDependencyReview returns an object
+for an empty list", "aggregates counts and offenders across files" and "finds a
+job-level reference and ignores others".
+
 **Branch outcomes:**
 
 - `test/ActionPins.ts:50` — `usesNode20DependencyReview` true for a known node20
@@ -92,36 +121,32 @@ New tests, all in `test/ActionPins.ts`:
 - `test/ActionPins.ts:241` — vacuous-scan guard (`checked > 0`) fails when no
   reference is found —
   `test/ActionPins.ts::no workflow pins actions/dependency-review-action to a node20 runtime release`;
-  `exempt (untestable): the guard runs on the real .github/workflows directory, which always contains a dependency-review reference, so a test cannot stage an empty scan without deleting the workflow; the fixture test checks the count directly`
+  `test/ActionPinsScan.ts::scanDependencyReview returns an object for an empty list`
+  checks the empty-scan count directly, and deleting the `docs.push` call on
+  the real-workflow path makes the guard fail
 - `.github/workflows/dependency-review.yml:36` — pin is node24 v5.0.0 —
   `test/ActionPins.ts::no workflow pins actions/dependency-review-action to a node20 runtime release`
   — restoring the v4.9.0 SHA goes red
 
 ## Mutation check
 
-Every mutant the gate listed is in `test/ActionPins.ts`, which is itself a test
-file: no other test imports it, so the gate's runner has nothing to run against
-it. I applied the equivalent mutations to a scratch copy and ran that file's own
-tests: dropping the SHA lookup at line 50, negating lines 201 and 204, removing
-`checked++` and `push`, and flipping a `false` expectation at line 175 each went
-red. These mutants cannot be killed by a separate test:
+The gate listed six surviving mutants, all in `test/ActionPins.ts`, which no
+test imported, so the gate had nothing to run against them. The new
+`test/ActionPinsScan.ts` imports `scanDependencyReview` from that module (the
+import also runs the module's own tests), so each mutant now makes a test fail.
+Applied to a scratch copy and run with `deno test -A test/ActionPinsScan.ts`:
 
-- `test/ActionPins.ts:50` exempt (untestable): the helper lives in a test module
-  that no other test imports; the module's own tests kill it (verified in a
-  scratch copy, 3 tests red).
-- `test/ActionPins.ts:175` exempt (untestable): an expectation inside a test
-  body; no other test imports the module; flipping it turns the module's own
-  test red.
-- `test/ActionPins.ts:181` exempt (untestable): same as line 175.
-- `test/ActionPins.ts:187` exempt (untestable): same as line 175.
-- `test/ActionPins.ts:189` exempt (untestable): an assertion inside a test body;
-  deleting it removes coverage and no test can observe a deleted assertion.
-- `test/ActionPins.ts:201` exempt (untestable): in the module's own scan helper;
-  killed by its own fixture test (verified in a scratch copy), but no other test
-  imports the module.
-- `test/ActionPins.ts:204` exempt (untestable): same as line 201.
-- `test/ActionPins.ts:205` exempt (untestable): same as line 201.
-- `test/ActionPins.ts:232` exempt (untestable): the `files.length > 0` assertion
-  inside a test body; deleting it removes coverage, and no test can observe it.
+- `test/ActionPins.ts:209` replaced return value with undefined — red
+  (`Cannot destructure property 'checked'`, plus the "returns an object" test).
+- `test/ActionPins.ts:221` deleted `checked: 2` — red (type check and assertion
+  failure in the fixture test).
+- `test/ActionPins.ts:222` deleted `offenders` — red (same).
+- `test/ActionPins.ts:225` deleted `checked: 0` — red (same).
+- `test/ActionPins.ts:226` deleted `offenders: []` — red (same).
+- `test/ActionPins.ts:236` deleted `docs.push(...)` — red ("scan is vacuous").
+
+No line is exempted. The earlier `exempt (untestable)` entries for lines 50, 175,
+181, 187, 189, 201, 204, 205 and 232 are withdrawn: they were reachable the same
+way, and the file now runs under an importing test.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
