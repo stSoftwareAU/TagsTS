@@ -2,7 +2,9 @@ name: ShellCheck
 
 on:
   pull_request:
-    branches: ["*"]
+    # "*" does not match "/", so milestone/* is listed explicitly to
+    # ensure milestone sub-issue PRs are checked (Issue #94).
+    branches: ["*", "milestone/*"]
   push:
     branches: [main, master, Develop]
 
