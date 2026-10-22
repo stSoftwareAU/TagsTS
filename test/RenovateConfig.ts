@@ -214,7 +214,13 @@ Deno.test("renovate docker manager captures the actionlint version and digest pi
     "expected exactly one rhysd/actionlint pin in the workflow file",
   );
   assertEquals(matches[0].depName, "rhysd/actionlint");
-  assertEquals(matches[0].currentValue, "1.7.12");
+  // Derived from the workflow, not typed in: a Renovate bump must keep this green.
+  const pinned = workflowText.match(/rhysd\/actionlint:(\d+\.\d+\.\d+)@/);
+  assert(
+    pinned,
+    "workflow must pin rhysd/actionlint as <X.Y.Z>@sha256:<digest>",
+  );
+  assertEquals(matches[0].currentValue, pinned[1]);
   assert(
     /^\d+\.\d+\.\d+$/.test(matches[0].currentValue),
     `currentValue must be a plain version, got: ${matches[0].currentValue}`,
