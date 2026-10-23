@@ -73,7 +73,7 @@ other test can import a test file without registering its tests:
 - `test/ShellCheckWorkflow.ts:82` (was :148) exempt (untestable): this is the
   `Array.isArray` assertion inside the test body; deleting it only removes a
   diagnostic, because the next line would throw on a non-array anyway.
-- `test/ShellCheckWorkflow.ts:98` (was :165) exempt (untestable): this is the
+- `test/ShellCheckWorkflow.ts:99` (was :165) exempt (untestable): this is the
   expected value of the negative assertion inside the test body; a test file
   cannot be imported to test it without registering its tests twice.
 
