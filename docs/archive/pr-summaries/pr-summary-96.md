@@ -24,13 +24,16 @@ sub-issue PRs.
 - **`*` does not match `/` in GitHub filter globs.** So `milestone/*` is listed
   explicitly. Milestone names have no nested slashes, so one level is enough.
 - **`"Develop"` is kept.** PRs into `Develop` still run the workflow.
-- **The test imports a RegExp-free backtracking glob matcher
-  (`test/BranchFilter.ts`) copied from `test/GitleaksWorkflow.ts`.** It is a
-  stand-in for GitHub semantics, checked against the cases in GitHub's
-  documented filter-pattern cheat sheet: `milestone/foo` matches `milestone/*`,
-  a `Develop`-only filter does not match it, and `milestone/a/b` does not match
-  `milestone/*`, because `*` does not match `/`. The source is GitHub Docs,
-  "Workflow syntax for GitHub Actions", filter pattern cheat sheet.
+- **Both workflow tests import one RegExp-free backtracking glob matcher
+  (`tools/BranchFilter.ts`).** `test/GitleaksWorkflow.ts` no longer carries a
+  private copy, so the two tests cannot judge a branch differently. The path and
+  content match `tools/BranchFilter.ts` in PR #108, so whichever PR merges
+  second sees an identical add/add. It is a stand-in for GitHub semantics,
+  checked against the cases in GitHub's documented filter-pattern cheat sheet:
+  `milestone/foo` matches `milestone/*`, a `Develop`-only filter does not match
+  it, and `milestone/a/b` does not match `milestone/*`, because `*` does not
+  match `/`. The source is GitHub Docs, "Workflow syntax for GitHub Actions",
+  filter pattern cheat sheet.
 
 ### Undiscoverable Facts
 
@@ -51,13 +54,14 @@ sub-issue PRs.
 - **Deno-native test:** the test uses `deno test` with `@std/assert` and
   `@std/yaml`, both already in `deno.json`. No Node tooling was added.
 - **Related rules checked:** the workflow-behaviour-change rule (a positive and
-  a negative test for each invariant); the twinned-rule rule (a copy of
-  `matchesBranchFilter` exists in `test/GitleaksWorkflow.ts`, and the helper
-  test pins its semantics; copies are not shared because each test file is
-  self-contained); and the worker's milestone-branch-filters workflow check
-  (that file is not in this repository, so it was not run here; the filter
-  follows its documented intent). The rules were applied to this PR's own diff
-  and found nothing.
+  a negative test for each invariant); the twinned-rule rule (the one copy of
+  `matchesBranchFilter` that was in `test/GitleaksWorkflow.ts` moved to
+  `tools/BranchFilter.ts`, and both `test/GitleaksWorkflow.ts` and
+  `test/DependencyReviewWorkflow.ts` import it, so there is no second copy to
+  drift; each file keeps its helper test); and the worker's
+  milestone-branch-filters workflow check (that file is not in this repository,
+  so it was not run here; the filter follows its documented intent). The rules
+  were applied to this PR's own diff and found nothing.
 
 ## Test Plan
 
@@ -80,30 +84,31 @@ sub-issue PRs.
   branches (no catch-all) —
   `test/DependencyReviewWorkflow.ts::dependency-review workflow does not run on unrelated branches`
   — flipped branches to ["**"], test went red
-- `test/BranchFilter.ts:17` — absent (no patterns) — matches nothing —
+- `tools/BranchFilter.ts:15` — absent (no patterns) — matches nothing —
   `test/DependencyReviewWorkflow.ts::dependency-review branch filter helper mirrors GitHub glob semantics`
   — flipped some to every, test went red
-- `test/BranchFilter.ts:26` — pattern consumed — match only if text consumed too
-  —
+- `tools/BranchFilter.ts:24` — pattern consumed — match only if text consumed
+  too —
   `test/DependencyReviewWorkflow.ts::dependency-review branch filter helper mirrors GitHub glob semantics`
   — inverted the end-of-pattern check, test went red
-- `test/BranchFilter.ts:33` — literal mismatch / text exhausted — no match —
+- `tools/BranchFilter.ts:31` — literal mismatch / text exhausted — no match —
   `test/DependencyReviewWorkflow.ts::dependency-review branch filter helper mirrors GitHub glob semantics`
   — changed && to ||, test went red
-- `test/BranchFilter.ts:38` — `**` crosses `/` —
+- `tools/BranchFilter.ts:36` — `**` crosses `/` —
   `test/DependencyReviewWorkflow.ts::dependency-review branch filter helper mirrors GitHub glob semantics`
   — inverted the `**` check, test went red
-- `test/BranchFilter.ts:51` — `*` stops at `/` —
+- `tools/BranchFilter.ts:49` — `*` stops at `/` —
   `test/DependencyReviewWorkflow.ts::dependency-review branch filter helper mirrors GitHub glob semantics`
   — removed the break, test went red
-- `test/BranchFilter.ts:53` — no match found — fail closed with false —
+- `tools/BranchFilter.ts:51` — no match found — fail closed with false —
   `test/DependencyReviewWorkflow.ts::dependency-review branch filter helper mirrors GitHub glob semantics`
   — flipped false to true, test went red
-- `test/BranchFilter.ts:32` — exempt (untestable): the `textIndex < text.length`
-  bound; `<=` is an equivalent mutant because `text[text.length]` is
-  `undefined`, which never equals a pattern character, so no input can change
-  the outcome. Searched the helper test in `test/DependencyReviewWorkflow.ts`.
-- `test/BranchFilter.ts:40` — exempt (untestable): the `patternIndex + 2` skip
+- `tools/BranchFilter.ts:30` — exempt (untestable): the
+  `textIndex < text.length` bound; `<=` is an equivalent mutant because
+  `text[text.length]` is `undefined`, which never equals a pattern character, so
+  no input can change the outcome. Searched the helper test in
+  `test/DependencyReviewWorkflow.ts`.
+- `tools/BranchFilter.ts:38` — exempt (untestable): the `patternIndex + 2` skip
   after `**`; `+ 1` is an equivalent mutant because the loop over `i` already
   tries every offset, so the same strings match. Searched the helper test in
   `test/DependencyReviewWorkflow.ts`.

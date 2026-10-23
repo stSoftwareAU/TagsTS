@@ -1,10 +1,8 @@
-// GitHub Actions branch-filter glob matcher shared by the workflow tests.
-// Tracked in issue #96.
-
 /**
  * Mirrors GitHub Actions' filter-pattern semantics for the subset used
- * here: "**" matches any characters including "/", "*" matches any
- * characters except "/", and everything else is matched literally.
+ * by the workflow tests: "**" matches any characters including "/", "*"
+ * matches any characters except "/", and everything else is matched
+ * literally.
  *
  * Implemented as a backtracking matcher (no RegExp) so the glob
  * pattern never flows into a dynamically constructed regular

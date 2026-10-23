@@ -20,48 +20,48 @@
         "flipWentRed": "flipped branches to [\"**\"], test went red"
       },
       {
-        "path": "test/BranchFilter.ts",
-        "line": 17,
+        "path": "tools/BranchFilter.ts",
+        "line": 15,
         "outcome": "absent (no patterns) \u2014 matches nothing",
         "test": "test/DependencyReviewWorkflow.ts",
         "testName": "dependency-review branch filter helper mirrors GitHub glob semantics",
         "flipWentRed": "flipped some to every, test went red"
       },
       {
-        "path": "test/BranchFilter.ts",
-        "line": 26,
+        "path": "tools/BranchFilter.ts",
+        "line": 24,
         "outcome": "pattern consumed \u2014 match only if text consumed too",
         "test": "test/DependencyReviewWorkflow.ts",
         "testName": "dependency-review branch filter helper mirrors GitHub glob semantics",
         "flipWentRed": "inverted the end-of-pattern check, test went red"
       },
       {
-        "path": "test/BranchFilter.ts",
-        "line": 33,
+        "path": "tools/BranchFilter.ts",
+        "line": 31,
         "outcome": "literal mismatch / text exhausted \u2014 no match",
         "test": "test/DependencyReviewWorkflow.ts",
         "testName": "dependency-review branch filter helper mirrors GitHub glob semantics",
         "flipWentRed": "changed && to ||, test went red"
       },
       {
-        "path": "test/BranchFilter.ts",
-        "line": 38,
+        "path": "tools/BranchFilter.ts",
+        "line": 36,
         "outcome": "** crosses /",
         "test": "test/DependencyReviewWorkflow.ts",
         "testName": "dependency-review branch filter helper mirrors GitHub glob semantics",
         "flipWentRed": "inverted the `**` check, test went red"
       },
       {
-        "path": "test/BranchFilter.ts",
-        "line": 51,
+        "path": "tools/BranchFilter.ts",
+        "line": 49,
         "outcome": "* stops at /",
         "test": "test/DependencyReviewWorkflow.ts",
         "testName": "dependency-review branch filter helper mirrors GitHub glob semantics",
         "flipWentRed": "removed the break, test went red"
       },
       {
-        "path": "test/BranchFilter.ts",
-        "line": 53,
+        "path": "tools/BranchFilter.ts",
+        "line": 51,
         "outcome": "no match found \u2014 fail closed with false",
         "test": "test/DependencyReviewWorkflow.ts",
         "testName": "dependency-review branch filter helper mirrors GitHub glob semantics",
