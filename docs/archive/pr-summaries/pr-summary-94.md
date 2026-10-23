@@ -65,8 +65,9 @@ Every PR, including milestone sub-issue PRs, must be checked by ShellCheck.
 
 The matcher that was in `test/ShellCheckWorkflow.ts` (lines 23-76) moved to
 `tools/BranchFilter.ts`, and `test/BranchFilter.ts` imports it and pins every
-branch, so the mutants reported there are killed (the two equivalent mutants are
-listed above). Two reported lines are assertions inside a test body, and no
+branch, so the mutants reported there are killed, except the two equivalent
+mutants recorded as exemptions in `docs/archive/pr-summaries/pr-summary-94.facts.json`.
+Two reported lines are assertions inside a test body, and no
 other test can import a test file without registering its tests:
 
 - `test/ShellCheckWorkflow.ts:82` (was :148) exempt (untestable): this is the
