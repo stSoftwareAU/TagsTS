@@ -28,12 +28,13 @@ sub-issue PRs.
   (`tools/BranchFilter.ts`).** `test/GitleaksWorkflow.ts` no longer carries a
   private copy, so the two tests cannot judge a branch differently. The path and
   content match `tools/BranchFilter.ts` in PR #108, so whichever PR merges
-  second sees an identical add/add. It is a stand-in for GitHub semantics,
-  checked against the cases in GitHub's documented filter-pattern cheat sheet:
-  `milestone/foo` matches `milestone/*`, a `Develop`-only filter does not match
-  it, and `milestone/a/b` does not match `milestone/*`, because `*` does not
-  match `/`. The source is GitHub Docs, "Workflow syntax for GitHub Actions",
-  filter pattern cheat sheet.
+  second sees an identical add/add. PR #108 also adds a separate
+  `test/BranchFilter.ts` test file; this PR adds no file at that path. It is a
+  stand-in for GitHub semantics, checked against the cases in GitHub's
+  documented filter-pattern cheat sheet: `milestone/foo` matches `milestone/*`,
+  a `Develop`-only filter does not match it, and `milestone/a/b` does not match
+  `milestone/*`, because `*` does not match `/`. The source is GitHub Docs,
+  "Workflow syntax for GitHub Actions", filter pattern cheat sheet.
 
 ### Undiscoverable Facts
 
