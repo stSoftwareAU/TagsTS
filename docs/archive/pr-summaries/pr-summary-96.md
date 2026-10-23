@@ -48,10 +48,9 @@ sub-issue PRs.
   dependency-review branch filter, the `tools/BranchFilter.ts` test helper, the
   `cspell.json` word list or the `deno.json` change (README.md, CONTRIBUTING.md
   and docs/ have no hit for those names); siblings: `gitleaks.yml`,
-  `semgrep.yml`, `markdown-lint.yml`, `shellcheck.yml` branch filters —
-  gitleaks already lists `milestone/*`, semgrep and markdown-lint use `**`,
-  shellcheck is handled by #94 / PR #108; no doc lists them, so none needed
-  updating; no hits
+  `semgrep.yml`, `markdown-lint.yml`, `shellcheck.yml` branch filters — gitleaks
+  already lists `milestone/*`, semgrep and markdown-lint use `**`, shellcheck is
+  handled by #94 / PR #108; no doc lists them, so none needed updating; no hits
 - No existing assertion was removed or loosened.
 - **Deno-native test:** the test uses `deno test` with `@std/assert` and
   `@std/yaml`, both already in `deno.json`. No Node tooling was added.
