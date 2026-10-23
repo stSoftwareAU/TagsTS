@@ -32,15 +32,16 @@ Every PR, including milestone sub-issue PRs, must be checked by ShellCheck.
 ## Evidence
 
 - `timeout 1000 ./quality.sh < /dev/null`: `ok | 123 passed | 0 failed` before
-  the matcher moved; after it,
-  `deno test test/BranchFilter.ts test/ShellCheckWorkflow.ts` is
-  `ok | 9 passed | 0 failed`. **Docs sweep** — grep: `milestone`, `shellcheck`,
-  `branches`, `branch filter`; section: none — no manual documents
+  the matcher moved; at head,
+  `deno test --allow-read test/BranchFilter.ts test/ShellCheckWorkflow.ts test/GitleaksWorkflow.ts`
+  is `ok | 18 passed | 0 failed`. **Docs sweep** — grep: `milestone`,
+  `shellcheck`, `branches`, `branch filter`; section: none — no manual documents
   `shellcheck.yml`'s trigger; the nearest, `README.md#workflow-lint`, describes
   the actionlint workflow, and I read it through: every sentence stays true;
   siblings: `gitleaks.yml` and `semgrep.yml` (the same filter family, #65 and
-  #67), neither touched by this issue; no existing set gained a member; updated:
-  none
+  #67), their workflows are not touched by this issue (only
+  `test/GitleaksWorkflow.ts` changed, to import the shared matcher); no existing
+  set gained a member; updated: none
 - No existing assertion was removed or loosened.
 
 ## Test Plan
@@ -48,11 +49,14 @@ Every PR, including milestone sub-issue PRs, must be checked by ShellCheck.
 - **Red first:** with only `.github/workflows/shellcheck.yml` reverted to the
   base, the milestone test fails with the message
   `expected branch 'milestone/issue-94-slug' to match the pull_request filter`.
-  The other five tests pass. Restored afterwards.
-- **Callers/fakes:** none. The glob matcher is test-local.
-- **Twinned rules:** `test/GitleaksWorkflow.ts` holds the same matcher. It is a
-  per-file copy, as the repository's isolated workflow tests are. The helper's
-  own test pins its semantics.
+  The other four tests in that file pass. Restored afterwards.
+- **Callers/fakes:** none. The glob matcher is the exported module
+  `tools/BranchFilter.ts`; its callers are `test/ShellCheckWorkflow.ts`,
+  `test/GitleaksWorkflow.ts` and `test/BranchFilter.ts`.
+- **Twinned rules:** `test/GitleaksWorkflow.ts` used to keep an identical
+  private copy of the matcher; it now imports `matchesBranchFilter` from
+  `tools/BranchFilter.ts` and the private copy is deleted, so there is one
+  matcher. Its helper-semantics test stays and now exercises the shared module.
 
 **Branch outcomes:**
 
