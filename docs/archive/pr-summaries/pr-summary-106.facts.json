@@ -4,44 +4,60 @@
     "noneAdded": false,
     "entries": [
       {
-        "path": "test/ActionPins.ts",
-        "line": 48,
+        "path": "tools/GhReleasePins.ts",
+        "line": 22,
         "outcome": "a ref to any other action is not flagged as node20 gh-release",
         "test": "test/ActionPins.ts",
         "testName": "usesNode20GhRelease accepts node24 and unrelated actions",
         "flipWentRed": "inverting the action match turned 4 tests red"
       },
       {
-        "path": "test/ActionPins.ts",
-        "line": 49,
+        "path": "tools/GhReleasePins.ts",
+        "line": 23,
         "outcome": "the v2.6.2 SHA is flagged and a node24 SHA is not",
         "test": "test/ActionPins.ts",
         "testName": "usesNode20GhRelease flags the node20 v2.6.2 pin",
         "flipWentRed": "forcing the SHA lookup to false turned 3 tests red"
       },
       {
-        "path": "test/ActionPins.ts",
-        "line": 209,
+        "path": "tools/GhReleasePins.ts",
+        "line": 50,
+        "outcome": "non gh-release refs are skipped, not counted",
+        "test": "test/ActionPins.ts",
+        "testName": "scanGhRelease counts job-level refs and tags offenders with the file",
+        "flipWentRed": "forcing the skip condition to false turned 2 tests red"
+      },
+      {
+        "path": "tools/GhReleasePins.ts",
+        "line": 53,
         "outcome": "a node20 gh-release pin is recorded as an offender",
         "test": "test/ActionPins.ts",
         "testName": "scanGhReleaseFiles reports node20 pins and counts only gh-release refs",
         "flipWentRed": "removing the offenders.push turned 2 tests red"
       },
       {
-        "path": "test/ActionPins.ts",
-        "line": 235,
+        "path": "tools/GhReleasePins.ts",
+        "line": 79,
         "outcome": "a scan that finds no gh-release reference is reported as vacuous",
         "test": "test/ActionPins.ts",
         "testName": "ghReleaseScanProblems fails a vacuous scan and lists node20 pins",
         "flipWentRed": "forcing the condition to false turned the test red"
       },
       {
-        "path": "test/ActionPins.ts",
-        "line": 235,
+        "path": "tools/GhReleasePins.ts",
+        "line": 79,
         "outcome": "a scan that checked at least one reference adds no vacuity problem",
         "test": "test/ActionPins.ts",
         "testName": "ghReleaseScanProblems fails a vacuous scan and lists node20 pins",
         "flipWentRed": "forcing the condition to true made the node24 fixture return a problem and turned the test red"
+      },
+      {
+        "path": "tools/GhReleasePins.ts",
+        "line": 93,
+        "outcome": "each workflow file is loaded into the map",
+        "test": "test/ActionPins.ts",
+        "testName": "readWorkflowTexts maps each file path to its text",
+        "flipWentRed": "dropping texts.set turned 2 tests red"
       },
       {
         "path": ".github/workflows/github-release.yml",
