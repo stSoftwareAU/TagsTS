@@ -51,48 +51,15 @@ Every PR, including milestone sub-issue PRs, must be checked by ShellCheck.
   `expected branch 'milestone/issue-94-slug' to match the pull_request filter`.
   The other four tests in that file pass. Restored afterwards.
 - **Callers/fakes:** no fakes. The glob matcher is the exported module
-  `tools/BranchFilter.ts`; its callers, all checked, are `test/ShellCheckWorkflow.ts`,
-  `test/GitleaksWorkflow.ts` and `test/BranchFilter.ts`.
+  `tools/BranchFilter.ts`; its callers, all checked, are
+  `test/ShellCheckWorkflow.ts`, `test/GitleaksWorkflow.ts` and
+  `test/BranchFilter.ts`.
 - **Twinned rules:** `test/GitleaksWorkflow.ts` used to keep an identical
   private copy of the matcher; it now imports `matchesBranchFilter` from
   `tools/BranchFilter.ts` and the private copy is deleted, so there is one
   matcher. Its helper-semantics test stays and now exercises the shared module.
 
-**Branch outcomes:**
-
-- `.github/workflows/shellcheck.yml:7` — success (`milestone/*` entry matches
-  `milestone/issue-94-slug`) —
-  `test/ShellCheckWorkflow.ts::shellcheck workflow runs on PRs targeting Develop, main and milestone branches`
-  — dropped the entry, test went red
-- `tools/BranchFilter.ts:15` — any pattern matching is enough —
-  `test/BranchFilter.ts::branch filter: any listed pattern may match` — flipped
-  `some` to `every`, test went red
-- `tools/BranchFilter.ts:24` — pattern exhausted, text must be exhausted too —
-  `test/BranchFilter.ts::branch filter: literal patterns match exactly` —
-  inverted the condition, test went red
-- `tools/BranchFilter.ts:25` — error (text left over after the pattern ends) —
-  `test/BranchFilter.ts::branch filter: literal patterns match exactly` —
-  returned `true`, test went red
-- `tools/BranchFilter.ts:28` — literal character branch —
-  `test/BranchFilter.ts::branch filter: literal patterns match exactly` —
-  inverted the condition, test went red
-- `tools/BranchFilter.ts:36` — `**` branch crosses slashes —
-  `test/BranchFilter.ts::branch filter: a double star crosses slashes` —
-  inverted the condition, test went red
-- `tools/BranchFilter.ts:49` — `*` stops at a slash —
-  `test/BranchFilter.ts::branch filter: a single star stops at a slash` —
-  deleted the `break` and inverted it, test went red
-- `tools/BranchFilter.ts:45` — absent (`*` at the end of the text) —
-  `test/BranchFilter.ts::branch filter: a single star stops at a slash` —
-  changed `<=` to `<`, test went red
-- `tools/BranchFilter.ts:30` — exempt (untestable): the
-  `textIndex < text.length` bounds guard is redundant, because `text[textIndex]`
-  is `undefined` past the end and never equals a pattern character; no input can
-  distinguish the two (searched `test/BranchFilter.ts`)
-- `tools/BranchFilter.ts:38` — exempt (untestable): `patternIndex + 2` against
-  `+ 1` is an equivalent mutant, because the `**` loop already tries every start
-  position, so a following `*` cannot change the result (searched
-  `test/BranchFilter.ts`)
+<!-- vibe-branch-outcomes -->
 
 ## Mutation check
 
