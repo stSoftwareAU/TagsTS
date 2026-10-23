@@ -50,8 +50,8 @@ Every PR, including milestone sub-issue PRs, must be checked by ShellCheck.
   base, the milestone test fails with the message
   `expected branch 'milestone/issue-94-slug' to match the pull_request filter`.
   The other four tests in that file pass. Restored afterwards.
-- **Callers/fakes:** none. The glob matcher is the exported module
-  `tools/BranchFilter.ts`; its callers are `test/ShellCheckWorkflow.ts`,
+- **Callers/fakes:** no fakes. The glob matcher is the exported module
+  `tools/BranchFilter.ts`; its callers, all checked, are `test/ShellCheckWorkflow.ts`,
   `test/GitleaksWorkflow.ts` and `test/BranchFilter.ts`.
 - **Twinned rules:** `test/GitleaksWorkflow.ts` used to keep an identical
   private copy of the matcher; it now imports `matchesBranchFilter` from
