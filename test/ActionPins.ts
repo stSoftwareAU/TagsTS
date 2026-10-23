@@ -226,6 +226,20 @@ export function scanGhReleaseFiles(
   return { checked, offenders };
 }
 
+/** Problems found scanning workflow texts: a vacuous scan, or node20 pins. */
+export function ghReleaseScanProblems(
+  texts: ReadonlyMap<string, string>,
+): string[] {
+  const { checked, offenders } = scanGhReleaseFiles(texts);
+  const problems: string[] = [];
+  if (checked === 0) {
+    problems.push(
+      "no softprops/action-gh-release references found; scan is vacuous",
+    );
+  }
+  return [...problems, ...offenders];
+}
+
 const FIXTURE_NODE20 = `
 jobs:
   a:
@@ -258,19 +272,27 @@ Deno.test("scanGhReleaseFiles reports node20 pins and counts only gh-release ref
   });
 });
 
+Deno.test("ghReleaseScanProblems fails a vacuous scan and lists node20 pins", () => {
+  assertEquals(ghReleaseScanProblems(new Map([["empty.yml", "jobs: {}"]])), [
+    "no softprops/action-gh-release references found; scan is vacuous",
+  ]);
+  assertEquals(
+    ghReleaseScanProblems(new Map([["n24.yml", FIXTURE_NODE24]])),
+    [],
+  );
+  assertEquals(
+    ghReleaseScanProblems(new Map([["n20.yml", FIXTURE_NODE20]])).length,
+    1,
+  );
+});
+
 Deno.test("no workflow pins softprops/action-gh-release to node20", async () => {
   const texts = new Map<string, string>();
   for (const file of await workflowFiles()) {
     texts.set(file, await Deno.readTextFile(file));
   }
-  const { checked, offenders } = scanGhReleaseFiles(texts);
-
-  assert(
-    checked > 0,
-    "no softprops/action-gh-release references found; scan is vacuous",
-  );
   assertEquals(
-    offenders,
+    ghReleaseScanProblems(texts),
     [],
     "softprops/action-gh-release must be on a node24 release, e.g. v3.0.3",
   );
