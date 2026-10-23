@@ -14,7 +14,8 @@ imports.
 - [x] Re-pin `github-release.yml` to v3.0.3
 - [x] Guard test for node20 `softprops/action-gh-release` pins
 - [x] Positive, negative and fixture-based tests in `test/ActionPins.ts`
-- [x] Guard logic extracted to `tools/GhReleasePins.ts` so it is imported by a test
+- [x] Guard logic extracted to `tools/GhReleasePins.ts` so it is imported by a
+      test
 - [x] Red-checks done by hand, each restored
 
 ## Evidence
@@ -27,8 +28,8 @@ imports.
   declares `using: "node20"`.
 - The v3.0.0 release notes list only the Node 24 runtime move and dependency
   updates, with no input changes, so the `with:` options stay as they were.
-- Red on base: the real-workflow test fails with the v2.6.2 SHA in place
-  (the `github-release.yml:40` entry under Branch outcomes). Green at head:
+- Red on base: the real-workflow test fails with the v2.6.2 SHA in place (the
+  `github-release.yml:40` entry under Branch outcomes). Green at head:
   `deno test --allow-read test/ActionPins.ts` passes 14 tests, 0 failures.
   Without `--allow-read` three tests fail with `NotCapable`, a permissions
   artefact; `quality.sh` runs with `--allow-all`.
@@ -77,14 +78,39 @@ SHA. This is a twinned rule with the `actions/checkout` guard
 (`usesNode20Checkout`); that guard is unchanged and has its own tests.
 
 **Branch outcomes:**
-- `tools/GhReleasePins.ts:22` — absent (a ref to any other action is not flagged) — `test/ActionPins.ts::usesNode20GhRelease accepts node24 and unrelated actions` — flipped `===` to `!==`, 5 tests red
-- `tools/GhReleasePins.ts:23` — success (the v2.6.2 SHA is flagged) / absent (a node24 SHA is not) — `test/ActionPins.ts::usesNode20GhRelease flags the node20 v2.6.2 pin` — forced the SHA lookup to `false`, 4 tests red
-- `tools/GhReleasePins.ts:50` — absent (non gh-release refs are skipped, not counted) — `test/ActionPins.ts::scanGhRelease counts job-level refs and tags offenders with the file` — forced the skip condition to `false`, 2 tests red
-- `tools/GhReleasePins.ts:53` — error (a node20 pin is recorded as an offender) — `test/ActionPins.ts::scanGhReleaseFiles reports node20 pins and counts only gh-release refs` — removed the `offenders.push`, 3 tests red
-- `tools/GhReleasePins.ts:79` — error (no gh-release reference found is reported as vacuous) — `test/ActionPins.ts::ghReleaseScanProblems fails a vacuous scan and lists node20 pins` — forced the condition to `false`, test went red
-- `tools/GhReleasePins.ts:79` — success (a scan that found a reference adds no vacuity problem) — `test/ActionPins.ts::ghReleaseScanProblems fails a vacuous scan and lists node20 pins` — forced the condition to `true`, the node24 fixture returned a problem and the test went red
-- `tools/GhReleasePins.ts:93` — success (each workflow file is loaded into the map) — `test/ActionPins.ts::readWorkflowTexts maps each file path to its text` — dropped the `texts.set`, 2 tests red
-- `.github/workflows/github-release.yml:40` — success (the release workflow pins a node24 gh-release SHA) — `test/ActionPins.ts::no workflow pins softprops/action-gh-release to node20` — restored the v2.6.2 SHA, test went red
+
+- `tools/GhReleasePins.ts:22` — absent (a ref to any other action is not
+  flagged) —
+  `test/ActionPins.ts::usesNode20GhRelease accepts node24 and unrelated actions`
+  — flipped `===` to `!==`, 5 tests red
+- `tools/GhReleasePins.ts:23` — success (the v2.6.2 SHA is flagged) / absent (a
+  node24 SHA is not) —
+  `test/ActionPins.ts::usesNode20GhRelease flags the node20 v2.6.2 pin` — forced
+  the SHA lookup to `false`, 4 tests red
+- `tools/GhReleasePins.ts:50` — absent (non gh-release refs are skipped, not
+  counted) —
+  `test/ActionPins.ts::scanGhRelease counts job-level refs and tags offenders with the file`
+  — forced the skip condition to `false`, 2 tests red
+- `tools/GhReleasePins.ts:53` — error (a node20 pin is recorded as an offender)
+  —
+  `test/ActionPins.ts::scanGhReleaseFiles reports node20 pins and counts only gh-release refs`
+  — removed the `offenders.push`, 3 tests red
+- `tools/GhReleasePins.ts:79` — error (no gh-release reference found is reported
+  as vacuous) —
+  `test/ActionPins.ts::ghReleaseScanProblems fails a vacuous scan and lists node20 pins`
+  — forced the condition to `false`, test went red
+- `tools/GhReleasePins.ts:79` — success (a scan that found a reference adds no
+  vacuity problem) —
+  `test/ActionPins.ts::ghReleaseScanProblems fails a vacuous scan and lists node20 pins`
+  — forced the condition to `true`, the node24 fixture returned a problem and
+  the test went red
+- `tools/GhReleasePins.ts:93` — success (each workflow file is loaded into the
+  map) — `test/ActionPins.ts::readWorkflowTexts maps each file path to its text`
+  — dropped the `texts.set`, 2 tests red
+- `.github/workflows/github-release.yml:40` — success (the release workflow pins
+  a node24 gh-release SHA) —
+  `test/ActionPins.ts::no workflow pins softprops/action-gh-release to node20` —
+  restored the v2.6.2 SHA, test went red
 
 <!-- vibe-branch-outcomes -->
 
