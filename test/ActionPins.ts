@@ -3,7 +3,8 @@
 // mutable tag or branch (CWE-494). Tracked in issue #39. Also guards against
 // releases of actions/checkout and streetsidesoftware/cspell-action that run on
 // the deprecated node20 Actions runtime, which GitHub removed on 2026-09-16
-// (issues #72 and #104). Node20 SHAs are verified with
+// (issues #72 and #104), and actions/dependency-review-action v4.x releases on
+// node20 (issue #105). Node20 SHAs are verified with
 // `gh api repos/<owner>/<repo>/commits/<tag> --jq .sha`.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
@@ -62,6 +63,23 @@ export function usesNode20Checkout(uses: string): boolean {
   return uses.split("@")[0] === "actions/checkout" && usesNode20Action(uses);
 }
 
+/**
+ * actions/dependency-review-action commit SHAs whose `action.yml` declares
+ * `using: node20` (issue #105). Verified with
+ * `gh api repos/actions/dependency-review-action/commits/<tag> --jq .sha`.
+ */
+export const NODE20_DEPENDENCY_REVIEW_SHAS: ReadonlyMap<string, string> =
+  new Map([
+    ["2031cfc080254a8a887f58cffee85186f0e49e48", "v4.9.0"],
+  ]);
+
+/** True when `uses` pins actions/dependency-review-action to a node20 release. */
+export function usesNode20DependencyReview(uses: string): boolean {
+  const [action, ref] = uses.split("@");
+  return action === "actions/dependency-review-action" &&
+    NODE20_DEPENDENCY_REVIEW_SHAS.has(ref ?? "");
+}
+
 /** Every `uses:` reference (step-level and job-level) in a parsed workflow. */
 function usesRefs(doc: unknown): string[] {
   // deno-lint-ignore no-explicit-any
@@ -74,14 +92,27 @@ function usesRefs(doc: unknown): string[] {
   ]);
 }
 
-async function workflowFiles(): Promise<string[]> {
+async function workflowFiles(dir = WORKFLOW_DIR): Promise<string[]> {
   const files: string[] = [];
-  for await (const entry of Deno.readDir(WORKFLOW_DIR)) {
+  for await (const entry of Deno.readDir(dir)) {
     if (entry.isFile && /\.ya?ml$/.test(entry.name)) {
-      files.push(`${WORKFLOW_DIR}/${entry.name}`);
+      files.push(`${dir}/${entry.name}`);
     }
   }
   return files.sort();
+}
+
+/** Parse every workflow in `dir`; an empty directory fails loudly. */
+export async function loadWorkflowDocs(
+  dir = WORKFLOW_DIR,
+): Promise<Array<readonly [string, unknown]>> {
+  const files = await workflowFiles(dir);
+  assert(files.length > 0, `no workflows found in ${dir}`);
+  const docs: Array<readonly [string, unknown]> = [];
+  for (const file of files) {
+    docs.push([file, parse(await Deno.readTextFile(file))]);
+  }
+  return docs;
 }
 
 Deno.test("isPinned accepts SHA pins, local and docker references", () => {
@@ -224,5 +255,89 @@ Deno.test("no workflow pins a guarded action to a node20 runtime release", async
     offenders,
     [],
     "each guarded action must be on a node24 release, e.g. actions/checkout v6.0.2 or streetsidesoftware/cspell-action v9.1.0",
+  );
+});
+
+Deno.test("usesNode20DependencyReview flags the known node20 SHA", () => {
+  assert(
+    usesNode20DependencyReview(
+      "actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48",
+    ),
+  );
+});
+
+Deno.test("usesNode20DependencyReview accepts node24 v5.0.0 and unrelated actions", () => {
+  assertEquals(
+    usesNode20DependencyReview(
+      "actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20DependencyReview(
+      "other/action@2031cfc080254a8a887f58cffee85186f0e49e48",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20DependencyReview(
+      "actions/checkout@2031cfc080254a8a887f58cffee85186f0e49e48",
+    ),
+    false,
+  );
+  assertEquals(usesNode20DependencyReview("./.github/actions/local"), false);
+});
+
+/** Counts dependency-review-action references and lists node20 offenders. */
+export function scanDependencyReview(
+  docs: ReadonlyArray<readonly [string, unknown]>,
+): { checked: number; offenders: string[] } {
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const [file, doc] of docs) {
+    for (const uses of usesRefs(doc)) {
+      const [action, ref] = uses.split("@");
+      if (action !== "actions/dependency-review-action") continue;
+      checked++;
+      const tag = NODE20_DEPENDENCY_REVIEW_SHAS.get(ref ?? "");
+      if (usesNode20DependencyReview(uses)) {
+        offenders.push(`${file}: ${uses} (${tag})`);
+      }
+    }
+  }
+  return { checked, offenders };
+}
+
+Deno.test("scanDependencyReview lists a node20 pin and counts every reference", () => {
+  const node20 = "actions/dependency-review-action@" +
+    "2031cfc080254a8a887f58cffee85186f0e49e48";
+  const node24 = "actions/dependency-review-action@" +
+    "a1d282b36b6f3519aa1f3fc636f609c47dddb294";
+  const doc = parse(
+    `jobs:\n  a:\n    steps:\n      - uses: ${node20}\n      - uses: ${node24}\n      - uses: actions/checkout@v6\n`,
+  );
+  assertEquals(scanDependencyReview([["wf.yml", doc]]), {
+    checked: 2,
+    offenders: [`wf.yml: ${node20} (v4.9.0)`],
+  });
+  assertEquals(scanDependencyReview([["empty.yml", {}]]), {
+    checked: 0,
+    offenders: [],
+  });
+});
+
+Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime release", async () => {
+  const { checked, offenders } = scanDependencyReview(
+    await loadWorkflowDocs(),
+  );
+
+  assert(
+    checked > 0,
+    "no actions/dependency-review-action references found; scan is vacuous",
+  );
+  assertEquals(
+    offenders,
+    [],
+    "actions/dependency-review-action must be on a node24 release, e.g. v5.0.0",
   );
 });
