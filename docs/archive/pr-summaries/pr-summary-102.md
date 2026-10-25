@@ -1,0 +1,141 @@
+# PR Summary — Issue #102
+
+## Summary
+
+Closes #102. The actionlint image in `.github/workflows/actionlint.yml` was
+pinned as `rhysd/actionlint@sha256:<digest>` with no tag, and Renovate's
+`github-actions` manager never parses `run:` shell, so no bump could be offered.
+
+- [x] Re-pin as `rhysd/actionlint:1.7.12@sha256:b1934ee5…` (the existing digest)
+- [x] Add a second regex `customManagers` entry (`datasourceTemplate: docker`)
+      to `renovate.json` capturing `depName`, `currentValue` and `currentDigest`
+- [x] Extend `test/ActionlintWorkflow.ts` to require the `tag@digest` form
+- [x] Add docker-manager tests to `test/RenovateConfig.ts`
+- [x] Describe the new entry in `README.md`
+
+## Spec
+
+### Intent and Rationale
+
+- A tagless digest gives Renovate no version to track, and its `github-actions`
+  manager ignores `run:` shell; a tag plus a docker-datasource regex manager is
+  the smallest change that lets bumps (and the 24h `minimumReleaseAge`) apply.
+
+### Essential Design Decisions
+
+- The regex requires `X.Y.Z@sha256:<64 hex>`, so a tagless, floating or
+  range-tagged ref is never captured; the same shape is enforced by
+  `isTaggedDigestPin` in `test/ActionlintWorkflow.ts`.
+- Tests derive the expected version from the workflow text, so a Renovate bump
+  PR keeps CI green.
+
+### Undiscoverable Facts
+
+- Tag `1.7.12` was kept because the existing digest was already commented as
+  1.7.12 in the workflow, and it was then checked against the registry (see
+  Evidence): the digest is the manifest of `rhysd/actionlint:1.7.12`.
+
+## Evidence
+
+- `deno test --allow-all test/RenovateConfig.ts test/ActionlintWorkflow.ts`:
+  `ok | 18 passed | 0 failed`.
+- **Registry check** (Docker Hub registry API, 2026-10-25, anonymous pull token,
+  `HEAD /v2/rhysd/actionlint/manifests/<ref>`, index/manifest-list Accept
+  header): tag `1.7.12` returns
+  `docker-content-digest: sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667`,
+  identical to the digest pinned in `.github/workflows/actionlint.yml`; that
+  digest also resolves directly (HTTP 200) and `latest` returns the same digest,
+  so `1.7.12` is the current release and the tag matches the digest. No tag
+  change was needed. The offline tests cannot check this; it is a one-off
+  registry lookup.
+- **Docs sweep** — grep: `rhysd/actionlint`, `customManagers`, `regex`,
+  `minimumReleaseAge`, `github-actions manager`; section:
+  `README.md#dependency-quarantine`; siblings: the existing npm regex
+  `customManagers` entry described in the same paragraph; updated: `README.md`
+  (the paragraph now describes the second regex entry for the actionlint image
+  pin and why `github-actions` does not cover it).
+- No existing assertion was removed or loosened. The first draft of
+  `findRegexCustomManager` parameterised its failure message; that is reverted,
+  and a separate `findDockerCustomManager` helper is added so the original npm
+  assertion is unchanged.
+
+## Test Plan
+
+- No assertion was removed from an existing test. `findRegexCustomManager`'s
+  `assert(manager, "expected a customType=regex, datasourceTemplate=npm customManagers entry")`
+  is intact.
+- `test/ActionlintWorkflow.ts`: the real-workflow test now locates the image
+  with `ACTIONLINT_IMAGE_REF` (tag optional) and asserts `isTaggedDigestPin`; a
+  new test covers the guard's accepted and rejected forms.
+- `test/RenovateConfig.ts`: six new tests cover the docker manager (shape, real
+  workflow capture, negative refs, RE2 safety, file pattern, and no overlap with
+  the npm manager).
+- The real-workflow capture test derives the expected version from the workflow
+  text (`pinned[1]`) rather than typing `1.7.12`, so a Renovate bump PR keeps CI
+  green; the semver-format assertion stays.
+- Flips: deleting `currentDigest: groups.currentDigest` in `collectMatches` (now
+  `test/support/RenovateMatches.ts`) turned the real-workflow capture test red;
+  changing the guard test's final expected `true` to `false` turned it red.
+
+**Branch outcomes:**
+
+- `test/ActionlintWorkflow.ts:14` — error (non-string / tagless / floating /
+  short or upper-case digest / range tag rejected) —
+  `test/ActionlintWorkflow.ts::tagged digest pin guard rejects tagless, floating and malformed pins`
+  — flipped to accept, test went red
+- `test/ActionlintWorkflow.ts:14` — success (`X.Y.Z@sha256:<64 hex>` accepted) —
+  `test/ActionlintWorkflow.ts::tagged digest pin guard rejects tagless, floating and malformed pins`
+  — flipped the expected value, test went red
+- `test/ActionlintWorkflow.ts:79` — error (real workflow image not tag@digest) —
+  `test/ActionlintWorkflow.ts::actionlint job runs the digest-pinned rhysd/actionlint image`
+  — tagless pin made the test go red
+- `renovate.json:20` — success (version and digest captured) —
+  `test/RenovateConfig.ts::renovate docker manager captures the actionlint version and digest pin in the real workflow`
+  — went red when `currentDigest` was dropped from the collected groups
+- `renovate.json:20` — absent (tagless, `latest`, untagged, short digest, range
+  tag not matched) —
+  `test/RenovateConfig.ts::renovate docker manager ignores tagless, untagged, short-digest or range-tagged actionlint refs`
+  — loosening the pattern turns it red
+- `renovate.json:18` — success (file pattern matches the workflow) —
+  `test/RenovateConfig.ts::renovate docker manager file patterns match .github/workflows/actionlint.yml`
+- `renovate.json:20` — absent (npm and docker managers do not overlap) —
+  `test/RenovateConfig.ts::renovate npm and docker managers do not capture each other's pins`
+
+## Mutation survivors
+
+Fixed by tests: the helpers `isTaggedDigestPin` and `collectMatches` were moved
+out of the leaf test entry points into `test/support/ActionlintPin.ts` and
+`test/support/RenovateMatches.ts`, which tests import, so mutations of them are
+observable:
+
+- `test/support/ActionlintPin.ts` `typeof image === "string"` (was
+  `test/ActionlintWorkflow.ts:15`): the guard test now passes an object whose
+  `toString()` is a valid pin and expects `false`; replacing the operand with
+  `true` turns
+  `tagged digest pin guard rejects tagless, floating and malformed
+  pins` red
+  (verified with `deno test --no-check`).
+- `test/support/RenovateMatches.ts` `currentDigest: groups.currentDigest` (was
+  `test/RenovateConfig.ts:72`): deleting it turns
+  `renovate docker manager captures the actionlint version and digest pin in the
+  real workflow`
+  red (verified).
+
+Remaining lines are `assertEquals(…, false)` / expected values inside test
+bodies. A test file is a leaf entry point that nothing imports, so the harness
+cannot observe a mutation of an assertion in it; run directly they do go red.
+Harness search: `grep -rn "RenovateConfig\|ActionlintWorkflow" test/` finds no
+importer.
+
+- `test/ActionlintWorkflow.ts:88`, `:94`, `:98`, `:102`, `:106`, `:115` (the
+  `false` expected values) and `:120` (the `true` expected value) exempt
+  (untestable): expected value of an assertion inside a test body; no module
+  imports the file
+- `test/ActionlintWorkflow.ts:65` exempt (untestable): operands of the
+  step-finder predicate inside a test body; no module imports the file
+- `test/RenovateConfig.ts:32` and `:38` exempt (untestable): predicate and
+  `return manager` of test helper `findDockerCustomManager`; no module imports
+  the file
+- `test/RenovateConfig.ts:174`, `:175`, `:187`, `:190`, `:197`, `:222`, `:282`,
+  `:283`, `:288`, `:293` exempt (untestable): assertions inside test bodies; no
+  module imports the file
