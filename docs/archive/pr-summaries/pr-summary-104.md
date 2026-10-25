@@ -59,7 +59,7 @@ three guard modules, registering their tests and exposing the dependency
 relationship to test runners. Each probe copies the guard modules and Deno
 configuration to a temporary directory, supplies a synthetic workflow or known
 faulty helper, and requires the named guard test to fail. This checks the
-failure behavior of assertions inside test modules, including assertions that
+failure behaviour of assertions inside test modules, including assertions that
 merely importing those modules cannot protect. Copies use cached dependencies;
 repository workflows and source files are untouched by these probes.
 
