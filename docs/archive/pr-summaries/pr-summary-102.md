@@ -13,6 +13,27 @@ pinned as `rhysd/actionlint@sha256:<digest>` with no tag, and Renovate's
 - [x] Add docker-manager tests to `test/RenovateConfig.ts`
 - [x] Describe the new entry in `README.md`
 
+## Spec
+
+### Intent and Rationale
+
+- A tagless digest gives Renovate no version to track, and its `github-actions`
+  manager ignores `run:` shell; a tag plus a docker-datasource regex manager is
+  the smallest change that lets bumps (and the 24h `minimumReleaseAge`) apply.
+
+### Essential Design Decisions
+
+- The regex requires `X.Y.Z@sha256:<64 hex>`, so a tagless, floating or
+  range-tagged ref is never captured; the same shape is enforced by
+  `isTaggedDigestPin` in `test/ActionlintWorkflow.ts`.
+- Tests derive the expected version from the workflow text, so a Renovate bump
+  PR keeps CI green.
+
+### Undiscoverable Facts
+
+- Tag `1.7.12` was kept because the existing digest was already commented as
+  1.7.12 in the workflow.
+
 ## Evidence
 
 - `deno test --allow-all test/RenovateConfig.ts test/ActionlintWorkflow.ts`:
@@ -80,38 +101,49 @@ do go red (see Flips above). Harness search:
 `grep -rn "RenovateConfig\|ActionlintWorkflow" test/` finds no importer; each
 file is a leaf test entry point.
 
-- `test/RenovateConfig.ts:37` exempt (untestable): `return manager` of the test
-  helper `findDockerCustomManager`; no test imports the file
+- `test/RenovateConfig.ts:31` exempt (untestable): operands of the
+  `customType`/`datasourceTemplate` predicate in test helper
+  `findDockerCustomManager`; no module imports the file
+- `test/RenovateConfig.ts:37` exempt (untestable): `return manager` of test
+  helper `findDockerCustomManager`; no module imports the file
 - `test/RenovateConfig.ts:72` exempt (untestable):
   `currentDigest: groups.currentDigest` in test helper `collectMatches`;
-  deleting it turns the real-workflow capture test red when run directly
+  deleting it turns the real-workflow capture test red when run directly; no
+  module imports the file
 - `test/RenovateConfig.ts:200` exempt (untestable): assertion inside a test
-  body; no module imports it
+  body; no module imports the file
 - `test/RenovateConfig.ts:201` exempt (untestable): assertion inside a test
-  body; no module imports it
+  body; no module imports the file
 - `test/RenovateConfig.ts:216` exempt (untestable): assertion inside a test
-  body; no module imports it
+  body; no module imports the file
 - `test/RenovateConfig.ts:223` exempt (untestable): assertion inside a test
-  body; no module imports it
+  body; no module imports the file
 - `test/RenovateConfig.ts:308` exempt (untestable): assertion inside a test
-  body; no module imports it
+  body; no module imports the file
 - `test/RenovateConfig.ts:309` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:91` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:95` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:96` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:97` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:101` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:105` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:109` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:113` exempt (untestable): assertion inside a test
-  body; no module imports it
-- `test/ActionlintWorkflow.ts:115` exempt (untestable): assertion inside a test
-  body; no module imports it
+  body; no module imports the file
+- `test/ActionlintWorkflow.ts:15` exempt (untestable):
+  `typeof image === "string"` operand of test helper `isTaggedDigestPin`; no
+  module imports the file
+- `test/ActionlintWorkflow.ts:16` exempt (untestable): `.test(image)` operand of
+  test helper `isTaggedDigestPin`; no module imports the file
+- `test/ActionlintWorkflow.ts:70` exempt (untestable): both operands of the
+  step-finder predicate inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:93` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:95` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:96` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:99` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:104` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:108` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:112` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:113` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
+- `test/ActionlintWorkflow.ts:117` exempt (untestable): expected value of an
+  assertion inside a test body; no module imports the file
