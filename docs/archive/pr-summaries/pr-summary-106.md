@@ -15,9 +15,10 @@ options are unchanged. A node20 guard for this action, beside the existing
 - [x] Guard for node20 `softprops/action-gh-release` pins in
       `tools/GhReleasePins.ts`
 - [x] Positive, negative and fixture-based tests in `test/GhReleasePins.ts`
-- [x] `test/GhReleasePinsScan.ts` imports `test/GhReleasePins.ts` (the layout
-      `test/ActionPinsScan.ts` uses) and checks the workflow keeps a SHA pin
-      with a v3 version comment
+- [x] `test/GhReleasePinsScan.ts` imports `test/GhReleasePins.ts` and
+      `tools/GhReleasePins.ts` by name (the layout `test/ActionPinsScan.ts`
+      uses) and tests them directly; it checks the workflow keeps a SHA pin
+      followed by a `# v<semver>` comment
 - [x] `usesRefs` moved from `test/ActionPins.ts` to the tools module; the
       checkout and dependency-review guards still use it by import
 - [x] Branch merged with `origin/Develop` (one conflict, in
@@ -91,8 +92,15 @@ Tests added, in `test/GhReleasePins.ts`:
 - "no workflow pins softprops/action-gh-release to node20" scans the real
   workflows.
 
-Added in `test/GhReleasePinsScan.ts`: "github-release.yml keeps the SHA pin with
-a v3 version comment".
+Added in `test/GhReleasePinsScan.ts`: "github-release.yml keeps a SHA pin with a
+version comment" (regex `# v\d+\.\d+\.\d+`, no major version pinned, so a
+Renovate bump to v4 stays green; node20 detection is left to the denylist
+guard), plus direct tests of `usesNode20GhRelease`, `usesRefs`, `scanGhRelease`,
+`scanGhReleaseFiles`, `ghReleaseScanProblems`, `workflowFiles` (now takes a
+`dir` argument, tested against a temp dir holding a directory named `d.yml`, a
+`.txt` file and two yaml files) and `readWorkflowTexts`. `FIXTURE_NODE20`,
+`FIXTURE_NODE24` and `workflowFiles` are exported from `test/GhReleasePins.ts`
+for it.
 
 Callers and siblings checked: `usesNode20GhRelease`, `scanGhRelease`,
 `scanGhReleaseFiles`, `ghReleaseScanProblems`, `readWorkflowTexts` and
@@ -155,13 +163,22 @@ file is unchanged since; only its module doc comment changed).
 
 <!-- vibe-branch-outcomes -->
 
-**Mutation check:** earlier attempts reported survivors in `test/ActionPins.ts`
-and `tools/GhReleasePins.ts` ("no test imports this module"). The guard now
-lives in `tools/GhReleasePins.ts`, tested by `test/GhReleasePins.ts`, which
-`test/GhReleasePinsScan.ts` imports so its own lines are exercised too (the
-`test/ActionPinsScan.ts` layout). `test/ActionPins.ts` now adds only an import
-and a comment, and removes a function. I could not run the worker's mutation
-gate here, so the gate's verdict on this layout is not yet observed; no line is
-recorded as exempt.
+**Mutation check:** the gate reported 40 survivors in `test/GhReleasePins.ts`
+and `tools/GhReleasePins.ts`, all "no test imports this module". The cause was
+that `test/GhReleasePinsScan.ts` used a bare side-effect
+`import
+"./GhReleasePins.ts"` and never imported `tools/GhReleasePins.ts`, so
+the gate found no test importing either module. It now imports named bindings
+from both and tests them directly (the `test/ActionPinsScan.ts` shape).
+Red-checks on the head, each break applied then restored, run against
+`test/GhReleasePinsScan.ts` alone: `if (checked === 0)` forced to `false`, the
+`checked++` removed, the `offenders.push(...result.offenders)` removed, and the
+`texts.set` removed all turn it red. I could not run the worker's mutation gate
+here, so its verdict on the new layout is not observed; no line is recorded as
+exempt.
+
+**Pre-PR verifier:** the finding on `test/GhReleasePinsScan.ts:11` (the version
+comment assertion pinned `# v3.x.y`) is fixed: the regex is now
+`# v\d+\.\d+\.\d+`, as the verifier suggested.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

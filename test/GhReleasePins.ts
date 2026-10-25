@@ -14,11 +14,11 @@ import {
 
 const WORKFLOW_DIR = ".github/workflows";
 
-async function workflowFiles(): Promise<string[]> {
+export async function workflowFiles(dir = WORKFLOW_DIR): Promise<string[]> {
   const files: string[] = [];
-  for await (const entry of Deno.readDir(WORKFLOW_DIR)) {
+  for await (const entry of Deno.readDir(dir)) {
     if (entry.isFile && /\.ya?ml$/.test(entry.name)) {
-      files.push(`${WORKFLOW_DIR}/${entry.name}`);
+      files.push(`${dir}/${entry.name}`);
     }
   }
   return files.sort();
@@ -57,14 +57,14 @@ Deno.test("usesNode20GhRelease accepts node24 and unrelated actions", () => {
   );
 });
 
-const FIXTURE_NODE20 = `
+export const FIXTURE_NODE20 = `
 jobs:
   a:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
 `;
-const FIXTURE_NODE24 = `
+export const FIXTURE_NODE24 = `
 jobs:
   b:
     steps:
