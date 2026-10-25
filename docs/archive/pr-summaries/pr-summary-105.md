@@ -13,8 +13,11 @@ The `with:` options are unchanged.
       (`NODE20_DEPENDENCY_REVIEW_SHAS`, `usesNode20DependencyReview`,
       `scanDependencyReview`) with positive, negative and fixture tests
 - [x] Add `test/ActionPinsScan.ts`, which imports `test/ActionPins.ts` and tests
-      `scanDependencyReview` directly, so mutations of that module go red
-- [x] Mutation checks red, then restored
+      `scanDependencyReview` directly
+- [x] Add `test/ActionPins_test.ts` to import both modules under Deno's default
+      test discovery and verify that three guard assertions reject faulty
+      fixtures
+- [x] All 24 mutations from the completion check go red in scratch copies
 
 ## Spec
 
@@ -37,6 +40,11 @@ node24 release instead of suppressing the finding.
 
 - `deno test -A test/ActionPinsScan.ts`: 13 passed, 0 failed (the 10 tests of
   `test/ActionPins.ts` plus 3 new ones, since the import runs them too).
+- `deno test -A test/ActionPins_test.ts`: 16 passed, 0 failed (the same 13 tests
+  plus three tests that exercise assertion removal).
+- Full suite, using the `deno test` command from `quality.sh`: 154 passed, 0
+  failed.
+- `deno lint test/ActionPins_test.ts`: passed.
 
 **v5.0.0 review** (checked with `gh api` on 2026-10-22):
 
@@ -93,6 +101,26 @@ New tests in `test/ActionPinsScan.ts`: "scanDependencyReview returns an object
 for an empty list", "aggregates counts and offenders across files" and "finds a
 job-level reference and ignores others".
 
+`test/ActionPins_test.ts` imports both modules so default `deno test` discovers
+them. Its three additional tests run isolated copies in temporary directories:
+
+- "dependency-review negative test rejects a misclassified local action" injects
+  a classifier fault that reports local actions as node20. Removing the local
+  action assertion makes this faulty classifier pass the negative test, which
+  fails the outer test.
+- "dependency-review empty-list test rejects an incorrect scan count" injects a
+  count of one for an empty list. Removing the empty-list assertion makes this
+  faulty scan pass, which fails the outer test.
+- "dependency-review workflow guard rejects an empty workflow directory" runs
+  with an empty `.github/workflows` directory and requires the specific "no
+  workflows found" assertion failure. Removing that assertion leaves only the
+  later vacuous-scan error, which fails the outer test.
+
+The subprocess checks require an assertion failure and exactly one failed test;
+an import, syntax or type-check error cannot satisfy them. Temporary copies are
+removed after each run. No guard implementation or workflow pin changes were
+needed for the completion-check fix.
+
 **Branch outcomes:**
 
 - `test/ActionPins.ts:50` — `usesNode20DependencyReview` true for a known node20
@@ -130,23 +158,36 @@ job-level reference and ignores others".
 
 ## Mutation check
 
-The gate listed six surviving mutants, all in `test/ActionPins.ts`, which no
-test imported, so the gate had nothing to run against them. The new
-`test/ActionPinsScan.ts` imports `scanDependencyReview` from that module (the
-import also runs the module's own tests), so each mutant now makes a test fail.
-Applied to a scratch copy and run with `deno test -A test/ActionPinsScan.ts`:
+Required item 1 reported 24 surviving mutations across `test/ActionPins.ts` and
+`test/ActionPinsScan.ts`. Neither filename matches Deno's default test discovery
+pattern. `test/ActionPins_test.ts` now imports both, and the fault fixtures
+above also detect the three assertion deletions that merely importing the
+modules would not catch.
 
-- `test/ActionPins.ts:209` replaced return value with undefined — red
-  (`Cannot destructure property 'checked'`, plus the "returns an object" test).
-- `test/ActionPins.ts:221` deleted `checked: 2` — red (type check and assertion
-  failure in the fixture test).
-- `test/ActionPins.ts:222` deleted `offenders` — red (same).
-- `test/ActionPins.ts:225` deleted `checked: 0` — red (same).
-- `test/ActionPins.ts:226` deleted `offenders: []` — red (same).
-- `test/ActionPins.ts:236` deleted `docs.push(...)` — red ("scan is vacuous").
+All 24 mutations were applied individually to scratch copies and run using
+`deno test -A --no-check` with default discovery: **24 killed, 0 survived**.
+Type checking was disabled for this experiment so runtime test failures, rather
+than compiler errors, establish the result. Each run exited unsuccessfully with
+failed tests and an `AssertionError`. Line numbers below refer to the unchanged
+guard modules quoted in the notice.
 
-No line is exempted. The earlier `exempt (untestable)` entries for lines 50,
-175, 181, 187, 189, 201, 204, 205 and 232 are withdrawn: they were reachable the
-same way, and the file now runs under an importing test.
+| File and lines                                   | Mutations checked                                    | Runtime evidence                                                                  |
+| ------------------------------------------------ | ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `test/ActionPins.ts:49`                          | Replace action comparison with `true`                | Unrelated-action negative cases fail                                              |
+| `test/ActionPins.ts:50`                          | Delete lookup call; replace lookup with `true`       | Known-node20 positive case; node24 negative case fail respectively                |
+| `test/ActionPins.ts:175`, `:181`, `:187`, `:189` | Replace each expected `false` with `true`            | Negative-case assertions fail                                                     |
+| `test/ActionPins.ts:189`                         | Delete local-action assertion                        | Misclassified-local-action fixture test fails                                     |
+| `test/ActionPins.ts:201`                         | Negate action filter                                 | Mixed-reference scan fixtures fail                                                |
+| `test/ActionPins.ts:204`                         | Negate offender condition                            | Node20/node24 offender expectations fail                                          |
+| `test/ActionPins.ts:205`                         | Delete offender push                                 | Node20 offender expectations fail                                                 |
+| `test/ActionPins.ts:209`                         | Return `undefined`                                   | Empty-list result assertion fails                                                 |
+| `test/ActionPins.ts:221`, `:222`, `:225`, `:226` | Delete each expected object property                 | Mixed-reference or empty-workflow result assertion fails                          |
+| `test/ActionPins.ts:232`                         | Delete missing-workflow assertion                    | Empty-directory fixture test fails on the wrong error message                     |
+| `test/ActionPins.ts:236`                         | Delete document push                                 | Real-workflow vacuous-scan assertion fails                                        |
+| `test/ActionPinsScan.ts:14`                      | Delete assertion; delete expected `checked` property | Incorrect-empty-count fixture test; empty-list result assertion fail respectively |
+| `test/ActionPinsScan.ts:21`, `:22`               | Delete each expected object property                 | Cross-file aggregation assertion fails                                            |
+| `test/ActionPinsScan.ts:31`, `:32`               | Delete each expected object property                 | Job-level reference assertion fails                                               |
+
+No line is exempted. All listed lines are reachable and tested.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
