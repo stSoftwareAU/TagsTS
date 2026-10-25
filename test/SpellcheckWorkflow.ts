@@ -1,7 +1,13 @@
 // Verifies the spellcheck workflow runs with a least-privilege GITHUB_TOKEN
 // rather than the repository's broad default scopes (issue #59), and that its
 // cspell-action step is pinned to a commit SHA on a node24 release (issue #104).
-import { assert, assertEquals, assertMatch, assertThrows } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  AssertionError,
+  assertMatch,
+  assertThrows,
+} from "@std/assert";
 import { parse } from "@std/yaml";
 
 const WORKFLOW_PATH = ".github/workflows/spellcheck.yaml";
@@ -52,8 +58,17 @@ function checkCspellPinnedToSha(doc: any): void {
 function checkCspellInputs(doc: any): void {
   const step = cspellStep(doc);
   assert(step, "job must run cspell-action");
-  assertEquals(step.with?.files, "**/*.{md,html,js,ts,css}");
-  assertEquals(step.with?.config, ".github/workflows/cspell.json");
+  assert(step.with, "cspell-action must configure inputs");
+  assertEquals(
+    step.with?.files,
+    "**/*.{md,html,js,ts,css}",
+    "cspell files input must be preserved",
+  );
+  assertEquals(
+    step.with?.config,
+    ".github/workflows/cspell.json",
+    "cspell config input must be preserved",
+  );
 }
 
 function docWithCspellStep(step?: Record<string, unknown>) {
@@ -61,6 +76,7 @@ function docWithCspellStep(step?: Record<string, unknown>) {
     jobs: {
       spellcheck: {
         steps: [
+          { run: "echo checking spelling" },
           { uses: "actions/checkout@" + "a".repeat(40) },
           ...(step ? [step] : []),
         ],
@@ -120,21 +136,32 @@ Deno.test("cspell inputs check rejects a missing step and changed inputs", () =>
     Error,
     "job must run cspell-action",
   );
-  assertThrows(() =>
-    checkCspellInputs(
-      docWithCspellStep({
-        uses: CSPELL_SHA_USES,
-        with: { ...CSPELL_INPUTS, files: "**/*.md" },
-      }),
-    )
+  assertThrows(
+    () => checkCspellInputs(docWithCspellStep({ uses: CSPELL_SHA_USES })),
+    AssertionError,
+    "cspell-action must configure inputs",
   );
-  assertThrows(() =>
-    checkCspellInputs(
-      docWithCspellStep({
-        uses: CSPELL_SHA_USES,
-        with: { ...CSPELL_INPUTS, config: "other.json" },
-      }),
-    )
+  assertThrows(
+    () =>
+      checkCspellInputs(
+        docWithCspellStep({
+          uses: CSPELL_SHA_USES,
+          with: { ...CSPELL_INPUTS, files: "**/*.md" },
+        }),
+      ),
+    AssertionError,
+    "cspell files input must be preserved",
+  );
+  assertThrows(
+    () =>
+      checkCspellInputs(
+        docWithCspellStep({
+          uses: CSPELL_SHA_USES,
+          with: { ...CSPELL_INPUTS, config: "other.json" },
+        }),
+      ),
+    AssertionError,
+    "cspell config input must be preserved",
   );
   checkCspellInputs(
     docWithCspellStep({ uses: CSPELL_SHA_USES, with: CSPELL_INPUTS }),

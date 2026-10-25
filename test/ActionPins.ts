@@ -143,6 +143,12 @@ Deno.test("usesNode20Checkout accepts node24 checkout and unrelated actions", ()
     false,
   );
   assertEquals(usesNode20Checkout("./.github/actions/local"), false);
+  assertEquals(
+    usesNode20Checkout(
+      "streetsidesoftware/cspell-action@e464ae97d348eb3beb0c5a6296dc4388ad4484d9",
+    ),
+    false,
+  );
 });
 
 Deno.test("usesNode20Action flags each known node20 SHA of each guarded action", () => {

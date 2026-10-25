@@ -1,7 +1,6 @@
-// Re-runs the workflow guard suites (issues #72 and #104) through a module that
-// imports them, so their assertions are exercised by an importing test and a
-// change to a guard line turns a test red. Importing a test module registers
-// its tests in this module as well.
+// Registers the workflow guard suites (issues #72 and #104) as dependencies.
+// WorkflowGuardRegression_test.ts checks their failure behavior with invalid
+// workflows and known faulty helpers; importing alone cannot check that.
 import { assert, assertEquals } from "@std/assert";
 import {
   isPinned,
