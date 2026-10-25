@@ -32,12 +32,22 @@ pinned as `rhysd/actionlint@sha256:<digest>` with no tag, and Renovate's
 ### Undiscoverable Facts
 
 - Tag `1.7.12` was kept because the existing digest was already commented as
-  1.7.12 in the workflow.
+  1.7.12 in the workflow, and it was then checked against the registry (see
+  Evidence): the digest is the manifest of `rhysd/actionlint:1.7.12`.
 
 ## Evidence
 
 - `deno test --allow-all test/RenovateConfig.ts test/ActionlintWorkflow.ts`:
   `ok | 18 passed | 0 failed`.
+- **Registry check** (Docker Hub registry API, 2026-10-25, anonymous pull token,
+  `HEAD /v2/rhysd/actionlint/manifests/<ref>`, index/manifest-list Accept
+  header): tag `1.7.12` returns
+  `docker-content-digest: sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667`,
+  identical to the digest pinned in `.github/workflows/actionlint.yml`; that
+  digest also resolves directly (HTTP 200) and `latest` returns the same digest,
+  so `1.7.12` is the current release and the tag matches the digest. No tag
+  change was needed. The offline tests cannot check this; it is a one-off
+  registry lookup.
 - **Docs sweep** — grep: `rhysd/actionlint`, `customManagers`, `regex`,
   `minimumReleaseAge`, `github-actions manager`; section:
   `README.md#dependency-quarantine`; siblings: the existing npm regex
@@ -63,8 +73,8 @@ pinned as `rhysd/actionlint@sha256:<digest>` with no tag, and Renovate's
 - The real-workflow capture test derives the expected version from the workflow
   text (`pinned[1]`) rather than typing `1.7.12`, so a Renovate bump PR keeps CI
   green; the semver-format assertion stays.
-- Flips: deleting `currentDigest: groups.currentDigest` in `collectMatches`
-  (`test/RenovateConfig.ts:72`) turned the real-workflow capture test red;
+- Flips: deleting `currentDigest: groups.currentDigest` in `collectMatches` (now
+  `test/support/RenovateMatches.ts`) turned the real-workflow capture test red;
   changing the guard test's final expected `true` to `false` turned it red.
 
 **Branch outcomes:**
@@ -93,57 +103,39 @@ pinned as `rhysd/actionlint@sha256:<digest>` with no tag, and Renovate's
 
 ## Mutation survivors
 
-The mutation tool reports survivors only in test files
-(`test/ActionlintWorkflow.ts` and `test/RenovateConfig.ts`) with "no test
-imports this module": a test file is not imported by another test, so mutating
-its assertions cannot be observed by the harness. Run directly, these mutations
-do go red (see Flips above). Harness search:
-`grep -rn "RenovateConfig\|ActionlintWorkflow" test/` finds no importer; each
-file is a leaf test entry point.
+Fixed by tests: the helpers `isTaggedDigestPin` and `collectMatches` were moved
+out of the leaf test entry points into `test/support/ActionlintPin.ts` and
+`test/support/RenovateMatches.ts`, which tests import, so mutations of them are
+observable:
 
-- `test/RenovateConfig.ts:31` exempt (untestable): operands of the
-  `customType`/`datasourceTemplate` predicate in test helper
-  `findDockerCustomManager`; no module imports the file
-- `test/RenovateConfig.ts:37` exempt (untestable): `return manager` of test
-  helper `findDockerCustomManager`; no module imports the file
-- `test/RenovateConfig.ts:72` exempt (untestable):
-  `currentDigest: groups.currentDigest` in test helper `collectMatches`;
-  deleting it turns the real-workflow capture test red when run directly; no
-  module imports the file
-- `test/RenovateConfig.ts:200` exempt (untestable): assertion inside a test
-  body; no module imports the file
-- `test/RenovateConfig.ts:201` exempt (untestable): assertion inside a test
-  body; no module imports the file
-- `test/RenovateConfig.ts:216` exempt (untestable): assertion inside a test
-  body; no module imports the file
-- `test/RenovateConfig.ts:223` exempt (untestable): assertion inside a test
-  body; no module imports the file
-- `test/RenovateConfig.ts:308` exempt (untestable): assertion inside a test
-  body; no module imports the file
-- `test/RenovateConfig.ts:309` exempt (untestable): assertion inside a test
-  body; no module imports the file
-- `test/ActionlintWorkflow.ts:15` exempt (untestable):
-  `typeof image === "string"` operand of test helper `isTaggedDigestPin`; no
-  module imports the file
-- `test/ActionlintWorkflow.ts:16` exempt (untestable): `.test(image)` operand of
-  test helper `isTaggedDigestPin`; no module imports the file
-- `test/ActionlintWorkflow.ts:70` exempt (untestable): both operands of the
+- `test/support/ActionlintPin.ts` `typeof image === "string"` (was
+  `test/ActionlintWorkflow.ts:15`): the guard test now passes an object whose
+  `toString()` is a valid pin and expects `false`; replacing the operand with
+  `true` turns
+  `tagged digest pin guard rejects tagless, floating and malformed
+  pins` red
+  (verified with `deno test --no-check`).
+- `test/support/RenovateMatches.ts` `currentDigest: groups.currentDigest` (was
+  `test/RenovateConfig.ts:72`): deleting it turns
+  `renovate docker manager captures the actionlint version and digest pin in the
+  real workflow`
+  red (verified).
+
+Remaining lines are `assertEquals(…, false)` / expected values inside test
+bodies. A test file is a leaf entry point that nothing imports, so the harness
+cannot observe a mutation of an assertion in it; run directly they do go red.
+Harness search: `grep -rn "RenovateConfig\|ActionlintWorkflow" test/` finds no
+importer.
+
+- `test/ActionlintWorkflow.ts:88`, `:94`, `:98`, `:102`, `:106`, `:115` (the
+  `false` expected values) and `:120` (the `true` expected value) exempt
+  (untestable): expected value of an assertion inside a test body; no module
+  imports the file
+- `test/ActionlintWorkflow.ts:65` exempt (untestable): operands of the
   step-finder predicate inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:93` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:95` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:96` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:99` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:104` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:108` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:112` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:113` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
-- `test/ActionlintWorkflow.ts:117` exempt (untestable): expected value of an
-  assertion inside a test body; no module imports the file
+- `test/RenovateConfig.ts:32` and `:38` exempt (untestable): predicate and
+  `return manager` of test helper `findDockerCustomManager`; no module imports
+  the file
+- `test/RenovateConfig.ts:174`, `:175`, `:187`, `:190`, `:197`, `:222`, `:282`,
+  `:283`, `:288`, `:293` exempt (untestable): assertions inside test bodies; no
+  module imports the file

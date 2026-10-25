@@ -2,6 +2,7 @@
 // regressions. Tracked in issue #58.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
+import { isTaggedDigestPin } from "./support/ActionlintPin.ts";
 
 const WORKFLOW_PATH = ".github/workflows/actionlint.yml";
 // The repo's Actions allowlist rejects `docker://` action references (they can
@@ -9,12 +10,6 @@ const WORKFLOW_PATH = ".github/workflows/actionlint.yml";
 // Matches the image token whether or not it carries a tag, so a tagless pin is
 // still located and then rejected by isTaggedDigestPin with a clear message.
 const ACTIONLINT_IMAGE_REF = /\brhysd\/actionlint(?::[^\s@]+)?@sha256:\S*/;
-
-// Issue #102: a tagless digest pin gives Renovate/Dependabot no version to track; require rhysd/actionlint:X.Y.Z@sha256:<64 hex>.
-function isTaggedDigestPin(image: unknown): boolean {
-  return typeof image === "string" &&
-    /^rhysd\/actionlint:\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$/.test(image);
-}
 
 // deno-lint-ignore no-explicit-any
 async function loadWorkflow(): Promise<any> {
@@ -111,6 +106,14 @@ Deno.test("tagged digest pin guard rejects tagless, floating and malformed pins"
     false,
   );
   assertEquals(isTaggedDigestPin(undefined), false);
+  // A non-string whose String() form is a valid pin must still be rejected;
+  // RegExp#test would coerce it and accept it without the typeof check.
+  assertEquals(
+    isTaggedDigestPin({
+      toString: () => "rhysd/actionlint:1.7.12@sha256:" + "a".repeat(64),
+    }),
+    false,
+  );
 
   assertEquals(
     isTaggedDigestPin("rhysd/actionlint:1.7.12@sha256:" + "a".repeat(64)),

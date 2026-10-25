@@ -1,5 +1,6 @@
 // Verifies renovate.json keeps CI npm-install pins current under the 24h quarantine (Issue #70).
 import { assert, assertEquals } from "@std/assert";
+import { collectMatches } from "./support/RenovateMatches.ts";
 
 const RENOVATE_PATH = "renovate.json";
 const WORKFLOW_PATH = ".github/workflows/markdown-lint.yml";
@@ -47,33 +48,6 @@ function compileFilePattern(pattern: string): RegExp {
   // The pattern is a managerFilePatterns entry read from renovate.json under
   // test, not user-controlled input, so there's no ReDoS surface here.
   return new RegExp(pattern.slice(1, -1)); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-}
-
-interface MatchGroups {
-  depName: string;
-  currentValue: string;
-  currentDigest?: string;
-}
-
-// Runs every matchStrings pattern (as a global RegExp) against `text` and
-// collects all `{ depName, currentValue, currentDigest }` captures, keeping the
-// tests DRY. currentDigest is undefined when the pattern has no such group.
-function collectMatches(matchStrings: string[], text: string): MatchGroups[] {
-  const matches: MatchGroups[] = [];
-  for (const pattern of matchStrings) {
-    // The pattern is a matchStrings entry read from renovate.json under
-    // test, not user-controlled input, so there's no ReDoS surface here.
-    const re = new RegExp(pattern, "g"); // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-    for (const match of text.matchAll(re)) {
-      const groups = match.groups ?? {};
-      matches.push({
-        depName: groups.depName,
-        currentValue: groups.currentValue,
-        currentDigest: groups.currentDigest,
-      });
-    }
-  }
-  return matches;
 }
 
 Deno.test("renovate.json parses and sets a 24 hour minimum release age", async () => {
