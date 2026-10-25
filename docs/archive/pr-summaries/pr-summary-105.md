@@ -14,9 +14,10 @@ The `with:` options are unchanged.
       `scanDependencyReview`) with positive, negative and fixture tests
 - [x] Add `test/ActionPinsScan.ts`, which imports `test/ActionPins.ts` and tests
       `scanDependencyReview` directly
-- [x] Add `test/ActionPins_test.ts` to import both modules under Deno's default
-      test discovery and verify that three guard assertions reject faulty
-      fixtures
+- [x] Add `loadWorkflowDocs` to `test/ActionPins.ts` and test its
+      empty-directory rejection in-process from `test/ActionPinsScan.ts` (no
+      subprocess, so the workflow's least-privilege `deno test` flags still
+      suffice)
 - [x] All 24 mutations from the completion check go red in scratch copies
 
 ## Spec
@@ -38,13 +39,14 @@ node24 release instead of suppressing the finding.
 
 ## Evidence
 
-- `deno test -A test/ActionPinsScan.ts`: 13 passed, 0 failed (the 10 tests of
-  `test/ActionPins.ts` plus 3 new ones, since the import runs them too).
-- `deno test -A test/ActionPins_test.ts`: 16 passed, 0 failed (the same 13 tests
-  plus three tests that exercise assertion removal).
-- Full suite, using the `deno test` command from `quality.sh`: 154 passed, 0
-  failed.
-- `deno lint test/ActionPins_test.ts`: passed.
+- `deno test -A test/ActionPinsScan.ts`: 14 passed, 0 failed (the tests of
+  `test/ActionPins.ts` plus the scan tests, since the import runs them too).
+- Full suite with the workflow's flags
+  (`--allow-read=".,$RUNNER_TEMP"
+  --allow-write="$RUNNER_TEMP"`, no
+  `--allow-run`): 139 passed, 0 failed.
+- Removing the empty-directory assertion in `loadWorkflowDocs` turns
+  "loadWorkflowDocs rejects an empty workflow directory" red.
 
 **v5.0.0 review** (checked with `gh api` on 2026-10-22):
 
@@ -101,25 +103,14 @@ New tests in `test/ActionPinsScan.ts`: "scanDependencyReview returns an object
 for an empty list", "aggregates counts and offenders across files" and "finds a
 job-level reference and ignores others".
 
-`test/ActionPins_test.ts` imports both modules so default `deno test` discovers
-them. Its three additional tests run isolated copies in temporary directories:
-
-- "dependency-review negative test rejects a misclassified local action" injects
-  a classifier fault that reports local actions as node20. Removing the local
-  action assertion makes this faulty classifier pass the negative test, which
-  fails the outer test.
-- "dependency-review empty-list test rejects an incorrect scan count" injects a
-  count of one for an empty list. Removing the empty-list assertion makes this
-  faulty scan pass, which fails the outer test.
-- "dependency-review workflow guard rejects an empty workflow directory" runs
-  with an empty `.github/workflows` directory and requires the specific "no
-  workflows found" assertion failure. Removing that assertion leaves only the
-  later vacuous-scan error, which fails the outer test.
-
-The subprocess checks require an assertion failure and exactly one failed test;
-an import, syntax or type-check error cannot satisfy them. Temporary copies are
-removed after each run. No guard implementation or workflow pin changes were
-needed for the completion-check fix.
+"loadWorkflowDocs rejects an empty workflow directory" (in
+`test/ActionPinsScan.ts`) runs the workflow loader on an empty temporary
+directory and requires the specific "no workflows found" rejection, then
+confirms a directory with one workflow loads. It runs in-process: an earlier
+iteration spawned `deno test` subprocesses from `test/ActionPins_test.ts`, which
+needs `--allow-run` and failed under the quality workflow's least-privilege
+flags (Issue #38), so that file was removed. No guard implementation or workflow
+pin changes were needed.
 
 **Branch outcomes:**
 
@@ -159,10 +150,13 @@ needed for the completion-check fix.
 ## Mutation check
 
 Required item 1 reported 24 surviving mutations across `test/ActionPins.ts` and
-`test/ActionPinsScan.ts`. Neither filename matches Deno's default test discovery
-pattern. `test/ActionPins_test.ts` now imports both, and the fault fixtures
-above also detect the three assertion deletions that merely importing the
-modules would not catch.
+`test/ActionPinsScan.ts`. Direct in-process tests now cover the classifier, scan
+and workflow-loading behaviour. The table below records the original 24-mutation
+experiment, which used the since-removed `test/ActionPins_test.ts` subprocess
+fixtures; line numbers refer to the earlier revision and the three fixture-based
+rows (local-action assertion deletion, `ActionPinsScan.ts:14` assertion
+deletion, and `:232`) are now covered by the direct tests above, not re-run, and
+mutated test assertions that no other test observes are not detected.
 
 All 24 mutations were applied individually to scratch copies and run using
 `deno test -A --no-check` with default discovery: **24 killed, 0 survived**.

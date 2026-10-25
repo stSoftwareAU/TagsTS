@@ -1,9 +1,9 @@
 // Exercises scanDependencyReview from test/ActionPins.ts directly (issue
 // #105). Importing that module also runs its own guard tests here, so a
 // mutation of a changed line in it turns a test in this file red.
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import { parse } from "@std/yaml";
-import { scanDependencyReview } from "./ActionPins.ts";
+import { loadWorkflowDocs, scanDependencyReview } from "./ActionPins.ts";
 
 const NODE20 = "actions/dependency-review-action@" +
   "2031cfc080254a8a887f58cffee85186f0e49e48";
@@ -31,4 +31,19 @@ Deno.test("scanDependencyReview finds a job-level reference and ignores others",
     checked: 1,
     offenders: [`w.yml: ${NODE20} (v4.9.0)`],
   });
+});
+
+Deno.test("loadWorkflowDocs rejects an empty workflow directory", async () => {
+  const dir = await Deno.makeTempDir({ prefix: "action-pins-" });
+  try {
+    await assertRejects(
+      () => loadWorkflowDocs(dir),
+      Error,
+      `no workflows found in ${dir}`,
+    );
+    await Deno.writeTextFile(`${dir}/w.yml`, "jobs: {}\n");
+    assertEquals((await loadWorkflowDocs(dir)).length, 1);
+  } finally {
+    await Deno.remove(dir, { recursive: true });
+  }
 });

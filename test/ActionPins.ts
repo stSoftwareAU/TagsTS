@@ -62,14 +62,27 @@ function usesRefs(doc: unknown): string[] {
   ]);
 }
 
-async function workflowFiles(): Promise<string[]> {
+async function workflowFiles(dir = WORKFLOW_DIR): Promise<string[]> {
   const files: string[] = [];
-  for await (const entry of Deno.readDir(WORKFLOW_DIR)) {
+  for await (const entry of Deno.readDir(dir)) {
     if (entry.isFile && /\.ya?ml$/.test(entry.name)) {
-      files.push(`${WORKFLOW_DIR}/${entry.name}`);
+      files.push(`${dir}/${entry.name}`);
     }
   }
   return files.sort();
+}
+
+/** Parse every workflow in `dir`; an empty directory fails loudly. */
+export async function loadWorkflowDocs(
+  dir = WORKFLOW_DIR,
+): Promise<Array<readonly [string, unknown]>> {
+  const files = await workflowFiles(dir);
+  assert(files.length > 0, `no workflows found in ${dir}`);
+  const docs: Array<readonly [string, unknown]> = [];
+  for (const file of files) {
+    docs.push([file, parse(await Deno.readTextFile(file))]);
+  }
+  return docs;
 }
 
 Deno.test("isPinned accepts SHA pins, local and docker references", () => {
@@ -228,14 +241,9 @@ Deno.test("scanDependencyReview lists a node20 pin and counts every reference", 
 });
 
 Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime release", async () => {
-  const files = await workflowFiles();
-  assert(files.length > 0, `no workflows found in ${WORKFLOW_DIR}`);
-
-  const docs: Array<readonly [string, unknown]> = [];
-  for (const file of files) {
-    docs.push([file, parse(await Deno.readTextFile(file))]);
-  }
-  const { checked, offenders } = scanDependencyReview(docs);
+  const { checked, offenders } = scanDependencyReview(
+    await loadWorkflowDocs(),
+  );
 
   assert(
     checked > 0,
