@@ -10,6 +10,9 @@
 name: "Dependency review"
 on:
   pull_request:
+    # Draft PRs are work in progress (owner, 2026-10-23): CI runs
+    # once, when the PR is marked ready.
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: ["Develop"]
 
 # If using a dependency submission action in this workflow this permission will need to be set to:
@@ -25,6 +28,7 @@ permissions:
 
 jobs:
   dependency-review:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,7 +37,7 @@ jobs:
         with:
           persist-credentials: false
       - name: "Dependency Review"
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         # Commonly enabled options, see https://github.com/actions/dependency-review-action#configuration-options for all available options.
         with:
           comment-summary-in-pr: always

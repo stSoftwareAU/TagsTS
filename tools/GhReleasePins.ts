@@ -1,7 +1,7 @@
 /**
  * Detects workflows that pin softprops/action-gh-release to a release running
  * on the node20 Actions runtime, which GitHub removed on 2026-09-16
- * (issue #106). Used by test/ActionPins.ts.
+ * (issue #106). Used by test/GhReleasePins.ts and test/ActionPins.ts (usesRefs).
  *
  * @module
  */

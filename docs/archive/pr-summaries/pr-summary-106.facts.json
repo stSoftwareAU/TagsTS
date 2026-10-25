@@ -6,7 +6,7 @@
         "line": 22,
         "outcome": "a ref to any other action is not flagged as node20 gh-release",
         "path": "tools/GhReleasePins.ts",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "usesNode20GhRelease accepts node24 and unrelated actions"
       },
       {
@@ -14,7 +14,7 @@
         "line": 23,
         "outcome": "the v2.6.2 SHA is flagged and a node24 SHA is not",
         "path": "tools/GhReleasePins.ts",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "usesNode20GhRelease flags the node20 v2.6.2 pin"
       },
       {
@@ -22,7 +22,7 @@
         "line": 50,
         "outcome": "non gh-release refs are skipped, not counted",
         "path": "tools/GhReleasePins.ts",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "scanGhRelease counts job-level refs and tags offenders with the file"
       },
       {
@@ -30,7 +30,7 @@
         "line": 53,
         "outcome": "a node20 gh-release pin is recorded as an offender",
         "path": "tools/GhReleasePins.ts",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "scanGhReleaseFiles reports node20 pins and counts only gh-release refs"
       },
       {
@@ -38,7 +38,7 @@
         "line": 79,
         "outcome": "a scan that finds no gh-release reference is reported as vacuous",
         "path": "tools/GhReleasePins.ts",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "ghReleaseScanProblems fails a vacuous scan and lists node20 pins"
       },
       {
@@ -46,7 +46,7 @@
         "line": 79,
         "outcome": "a scan that checked at least one reference adds no vacuity problem",
         "path": "tools/GhReleasePins.ts",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "ghReleaseScanProblems fails a vacuous scan and lists node20 pins"
       },
       {
@@ -54,7 +54,7 @@
         "line": 93,
         "outcome": "each workflow file is loaded into the map",
         "path": "tools/GhReleasePins.ts",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "readWorkflowTexts maps each file path to its text"
       },
       {
@@ -62,7 +62,7 @@
         "line": 40,
         "outcome": "the release workflow pins a node24 gh-release SHA",
         "path": ".github/workflows/github-release.yml",
-        "test": "test/ActionPins.ts",
+        "test": "test/GhReleasePins.ts",
         "testName": "no workflow pins softprops/action-gh-release to node20"
       }
     ],

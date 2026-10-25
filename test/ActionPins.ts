@@ -2,19 +2,13 @@
 // workflows is pinned to an immutable 40-character commit SHA rather than a
 // mutable tag or branch (CWE-494). Tracked in issue #39. Also guards against
 // actions/checkout releases that run on the deprecated node20 Actions
-// runtime, which GitHub removed on 2026-09-16 (issue #72). It also guards
-// softprops/action-gh-release releases that run on node20 (issue #106).
+// runtime, which GitHub removed on 2026-09-16 (issue #72), and
+// actions/dependency-review-action v4.x releases on node20 (issue #105).
+// The softprops/action-gh-release node20 guard (issue #106) is in
+// test/GhReleasePins.ts.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
-import {
-  ghReleaseScanProblems,
-  NODE20_GH_RELEASE_SHAS,
-  readWorkflowTexts,
-  scanGhRelease,
-  scanGhReleaseFiles,
-  usesNode20GhRelease,
-  usesRefs,
-} from "../tools/GhReleasePins.ts";
+import { usesRefs } from "../tools/GhReleasePins.ts";
 
 const WORKFLOW_DIR = ".github/workflows";
 const SHA_PIN = /@[0-9a-f]{40}$/;
@@ -42,14 +36,44 @@ export function usesNode20Checkout(uses: string): boolean {
   return action === "actions/checkout" && NODE20_CHECKOUT_SHAS.has(ref ?? "");
 }
 
-async function workflowFiles(): Promise<string[]> {
+/**
+ * actions/dependency-review-action commit SHAs whose `action.yml` declares
+ * `using: node20` (issue #105). Verified with
+ * `gh api repos/actions/dependency-review-action/commits/<tag> --jq .sha`.
+ */
+export const NODE20_DEPENDENCY_REVIEW_SHAS: ReadonlyMap<string, string> =
+  new Map([
+    ["2031cfc080254a8a887f58cffee85186f0e49e48", "v4.9.0"],
+  ]);
+
+/** True when `uses` pins actions/dependency-review-action to a node20 release. */
+export function usesNode20DependencyReview(uses: string): boolean {
+  const [action, ref] = uses.split("@");
+  return action === "actions/dependency-review-action" &&
+    NODE20_DEPENDENCY_REVIEW_SHAS.has(ref ?? "");
+}
+
+async function workflowFiles(dir = WORKFLOW_DIR): Promise<string[]> {
   const files: string[] = [];
-  for await (const entry of Deno.readDir(WORKFLOW_DIR)) {
+  for await (const entry of Deno.readDir(dir)) {
     if (entry.isFile && /\.ya?ml$/.test(entry.name)) {
-      files.push(`${WORKFLOW_DIR}/${entry.name}`);
+      files.push(`${dir}/${entry.name}`);
     }
   }
   return files.sort();
+}
+
+/** Parse every workflow in `dir`; an empty directory fails loudly. */
+export async function loadWorkflowDocs(
+  dir = WORKFLOW_DIR,
+): Promise<Array<readonly [string, unknown]>> {
+  const files = await workflowFiles(dir);
+  assert(files.length > 0, `no workflows found in ${dir}`);
+  const docs: Array<readonly [string, unknown]> = [];
+  for (const file of files) {
+    docs.push([file, parse(await Deno.readTextFile(file))]);
+  }
+  return docs;
 }
 
 Deno.test("isPinned accepts SHA pins, local and docker references", () => {
@@ -139,135 +163,86 @@ Deno.test("no workflow pins actions/checkout to a node20 runtime release", async
   );
 });
 
-Deno.test("usesNode20GhRelease flags the node20 v2.6.2 pin", () => {
+Deno.test("usesNode20DependencyReview flags the known node20 SHA", () => {
   assert(
-    usesNode20GhRelease(
-      "softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65",
+    usesNode20DependencyReview(
+      "actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48",
     ),
-  );
-  assertEquals(
-    NODE20_GH_RELEASE_SHAS.get("3bb12739c298aeb8a4eeaf626c5b8d85266b0e65"),
-    "v2.6.2",
   );
 });
 
-Deno.test("usesNode20GhRelease accepts node24 and unrelated actions", () => {
+Deno.test("usesNode20DependencyReview accepts node24 v5.0.0 and unrelated actions", () => {
   assertEquals(
-    usesNode20GhRelease(
-      "softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64",
+    usesNode20DependencyReview(
+      "actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294",
     ),
     false,
   );
   assertEquals(
-    usesNode20GhRelease(
-      "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd",
+    usesNode20DependencyReview(
+      "other/action@2031cfc080254a8a887f58cffee85186f0e49e48",
     ),
     false,
   );
   assertEquals(
-    usesNode20GhRelease(
-      "other/action@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65",
+    usesNode20DependencyReview(
+      "actions/checkout@2031cfc080254a8a887f58cffee85186f0e49e48",
     ),
     false,
   );
+  assertEquals(usesNode20DependencyReview("./.github/actions/local"), false);
 });
 
-const FIXTURE_NODE20 = `
-jobs:
-  a:
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
-`;
-const FIXTURE_NODE24 = `
-jobs:
-  b:
-    steps:
-      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
-`;
+/** Counts dependency-review-action references and lists node20 offenders. */
+export function scanDependencyReview(
+  docs: ReadonlyArray<readonly [string, unknown]>,
+): { checked: number; offenders: string[] } {
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const [file, doc] of docs) {
+    for (const uses of usesRefs(doc)) {
+      const [action, ref] = uses.split("@");
+      if (action !== "actions/dependency-review-action") continue;
+      checked++;
+      const tag = NODE20_DEPENDENCY_REVIEW_SHAS.get(ref ?? "");
+      if (usesNode20DependencyReview(uses)) {
+        offenders.push(`${file}: ${uses} (${tag})`);
+      }
+    }
+  }
+  return { checked, offenders };
+}
 
-Deno.test("scanGhReleaseFiles reports node20 pins and counts only gh-release refs", () => {
-  assertEquals(
-    scanGhReleaseFiles(
-      new Map([["n20.yml", FIXTURE_NODE20], ["n24.yml", FIXTURE_NODE24]]),
-    ),
-    {
-      checked: 2,
-      offenders: [
-        "n20.yml: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 (v2.6.2)",
-      ],
-    },
+Deno.test("scanDependencyReview lists a node20 pin and counts every reference", () => {
+  const node20 = "actions/dependency-review-action@" +
+    "2031cfc080254a8a887f58cffee85186f0e49e48";
+  const node24 = "actions/dependency-review-action@" +
+    "a1d282b36b6f3519aa1f3fc636f609c47dddb294";
+  const doc = parse(
+    `jobs:\n  a:\n    steps:\n      - uses: ${node20}\n      - uses: ${node24}\n      - uses: actions/checkout@v6\n`,
   );
-  assertEquals(scanGhReleaseFiles(new Map([["empty.yml", "jobs: {}"]])), {
+  assertEquals(scanDependencyReview([["wf.yml", doc]]), {
+    checked: 2,
+    offenders: [`wf.yml: ${node20} (v4.9.0)`],
+  });
+  assertEquals(scanDependencyReview([["empty.yml", {}]]), {
     checked: 0,
     offenders: [],
   });
 });
 
-Deno.test("ghReleaseScanProblems fails a vacuous scan and lists node20 pins", () => {
-  assertEquals(ghReleaseScanProblems(new Map([["empty.yml", "jobs: {}"]])), [
-    "no softprops/action-gh-release references found; scan is vacuous",
-  ]);
+Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime release", async () => {
+  const { checked, offenders } = scanDependencyReview(
+    await loadWorkflowDocs(),
+  );
+
+  assert(
+    checked > 0,
+    "no actions/dependency-review-action references found; scan is vacuous",
+  );
   assertEquals(
-    ghReleaseScanProblems(new Map([["n24.yml", FIXTURE_NODE24]])),
+    offenders,
     [],
-  );
-  assertEquals(
-    ghReleaseScanProblems(new Map([["n20.yml", FIXTURE_NODE20]])),
-    [
-      "n20.yml: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 (v2.6.2)",
-    ],
-  );
-});
-
-Deno.test("usesRefs collects job-level and step-level uses and ignores non-strings", () => {
-  assertEquals(
-    usesRefs({
-      jobs: {
-        a: { uses: "./.github/workflows/x.yml" },
-        b: { steps: [{ uses: "o/r@1" }, { run: "echo" }, { uses: 5 }] },
-        c: { uses: 7 },
-      },
-    }),
-    ["./.github/workflows/x.yml", "o/r@1"],
-  );
-  assertEquals(usesRefs(null), []);
-  assertEquals(usesRefs({}), []);
-  assertEquals(usesRefs({ jobs: { a: {} } }), []);
-});
-
-Deno.test("scanGhRelease counts job-level refs and tags offenders with the file", () => {
-  const sha = "3bb12739c298aeb8a4eeaf626c5b8d85266b0e65";
-  assertEquals(
-    scanGhRelease("w.yml", {
-      jobs: {
-        a: { uses: `softprops/action-gh-release@${sha}` },
-        b: { steps: [{ uses: "softprops/action-gh-release@v3" }] },
-        c: { steps: [{ uses: `other/action@${sha}` }] },
-      },
-    }),
-    {
-      checked: 2,
-      offenders: [`w.yml: softprops/action-gh-release@${sha} (v2.6.2)`],
-    },
-  );
-  assertEquals(scanGhRelease("w.yml", null), { checked: 0, offenders: [] });
-});
-
-Deno.test("readWorkflowTexts maps each file path to its text", async () => {
-  const files = await workflowFiles();
-  const texts = await readWorkflowTexts(files);
-  assertEquals([...texts.keys()], files);
-  for (const [file, text] of texts) {
-    assertEquals(text, await Deno.readTextFile(file));
-  }
-  assertEquals((await readWorkflowTexts([])).size, 0);
-});
-
-Deno.test("no workflow pins softprops/action-gh-release to node20", async () => {
-  assertEquals(
-    ghReleaseScanProblems(await readWorkflowTexts(await workflowFiles())),
-    [],
-    "softprops/action-gh-release must be on a node24 release, e.g. v3.0.3",
+    "actions/dependency-review-action must be on a node24 release, e.g. v5.0.0",
   );
 });
