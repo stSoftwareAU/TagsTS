@@ -4,8 +4,11 @@
 // actions/checkout releases that run on the deprecated node20 Actions
 // runtime, which GitHub removed on 2026-09-16 (issue #72), and
 // actions/dependency-review-action v4.x releases on node20 (issue #105).
+// The softprops/action-gh-release node20 guard (issue #106) is in
+// test/GhReleasePins.ts.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
+import { usesRefs } from "../tools/GhReleasePins.ts";
 
 const WORKFLOW_DIR = ".github/workflows";
 const SHA_PIN = /@[0-9a-f]{40}$/;
@@ -48,18 +51,6 @@ export function usesNode20DependencyReview(uses: string): boolean {
   const [action, ref] = uses.split("@");
   return action === "actions/dependency-review-action" &&
     NODE20_DEPENDENCY_REVIEW_SHAS.has(ref ?? "");
-}
-
-/** Every `uses:` reference (step-level and job-level) in a parsed workflow. */
-function usesRefs(doc: unknown): string[] {
-  // deno-lint-ignore no-explicit-any
-  const jobs = Object.values((doc as any)?.jobs ?? {}) as any[];
-  return jobs.flatMap((job) => [
-    ...(typeof job?.uses === "string" ? [job.uses] : []),
-    ...((job?.steps ?? []) as Array<Record<string, unknown>>)
-      .map((step) => step.uses)
-      .filter((uses): uses is string => typeof uses === "string"),
-  ]);
 }
 
 async function workflowFiles(dir = WORKFLOW_DIR): Promise<string[]> {
