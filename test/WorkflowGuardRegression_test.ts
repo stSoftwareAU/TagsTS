@@ -1,17 +1,14 @@
-// These guards are themselves tests. Exercise their failure behavior in an
-// isolated child suite, so removing a guard assertion cannot silently pass CI.
+// These guards are themselves tests. Exercise their failure behaviour in an
+// isolated child suite, so removing a guard assertion fails ./quality.sh.
+// The probes spawn `deno test`, so they run only where the `run` permission is
+// granted (./quality.sh); CI's Test step omits it and reports this suite as
+// ignored, so CI does not catch a deleted guard assertion.
 // Only the named guard runs in each probe; the repository workflows stay intact.
+// The guard modules are read as text and copied, never imported, so their tests
+// are registered once by their own run.
 import { assert, assertEquals } from "@std/assert";
-// A discoverable Deno test entry also makes the dependency suites explicit.
-import "./ActionPins.ts";
-import "./SpellcheckWorkflow.ts";
-import "./WorkflowGuardSuite.ts";
 
-const MODULES = [
-  "ActionPins.ts",
-  "SpellcheckWorkflow.ts",
-  "WorkflowGuardSuite.ts",
-];
+const MODULES = ["ActionPins.ts", "SpellcheckWorkflow.ts"];
 const CHECKOUT = "actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd";
 const CSPELL =
   "streetsidesoftware/cspell-action@6f3c77c1406bc930f944ba97e9801a22e42caf58";
@@ -236,17 +233,14 @@ Deno.test({
         );
       }
       for (const helper of ["isPinned", "usesNode20Action"]) {
-        // Inject the helper fault into the dependency of the importing suite.
-        sources.set(
-          "ActionPins.ts",
-          faultyHelper(actionSource, helper, "return false;"),
-        );
         await probe(
-          `importing suite rejects a faulty ${helper}`,
-          "WorkflowGuardSuite.ts",
+          `guarded-actions test rejects a faulty ${helper}`,
+          "ActionPins.ts",
           "guarded actions include checkout and cspell-action",
+          {
+            source: faultyHelper(actionSource, helper, "return false;"),
+          },
         );
-        sources.set("ActionPins.ts", actionSource);
       }
     } finally {
       await Deno.remove(directory, { recursive: true });

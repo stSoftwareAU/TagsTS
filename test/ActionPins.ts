@@ -190,6 +190,19 @@ Deno.test("usesNode20Action flags each known node20 SHA of each guarded action",
   }
 });
 
+Deno.test("guarded actions include checkout and cspell-action", () => {
+  assertEquals(
+    [...NODE20_ACTION_SHAS.keys()].sort(),
+    ["actions/checkout", "streetsidesoftware/cspell-action"],
+  );
+  for (const [action, shas] of NODE20_ACTION_SHAS) {
+    for (const sha of shas.keys()) {
+      assert(isPinned(`${action}@${sha}`));
+      assert(usesNode20Action(`${action}@${sha}`));
+    }
+  }
+});
+
 // The literal is the issue #104 offending pin, kept independent of the map so deleting the map entry goes red.
 Deno.test("usesNode20Action flags the cspell-action v6.11.1 pin from issue #104", () => {
   assert(

@@ -54,14 +54,18 @@ The verifier findings reproduced before this correction:
 
 `test/WorkflowGuardRegression_test.ts::workflow guards reject invalid fixtures and
 faulty helpers`
-runs 17 isolated probes. This discoverable Deno test entry also imports the
-three guard modules, registering their tests and exposing the dependency
-relationship to test runners. Each probe copies the guard modules and Deno
-configuration to a temporary directory, supplies a synthetic workflow or known
-faulty helper, and requires the named guard test to fail. This checks the
-failure behaviour of assertions inside test modules, including assertions that
-merely importing those modules cannot protect. Copies use cached dependencies;
-repository workflows and source files are untouched by these probes.
+runs 17 isolated probes. It reads the two guard modules (`ActionPins.ts`,
+`SpellcheckWorkflow.ts`) as text and does not import them, so no test module
+re-registers another's tests. **It needs the `run` permission, so it runs under
+`./quality.sh` (`--allow-all`) and is reported as ignored in CI**, whose Test
+step omits `run` (Issue #38); CI therefore does not catch a deleted guard
+assertion, and the `R` rows in the mutation table below are caught locally only.
+Each probe copies the guard modules and Deno configuration to a temporary
+directory, supplies a synthetic workflow or known faulty helper, and requires
+the named guard test to fail. This checks the failure behaviour of assertions
+inside test modules, including assertions that merely importing those modules
+cannot protect. Copies use cached dependencies; repository workflows and source
+files are untouched by these probes.
 
 The checkout compatibility test now explicitly rejects a node20 cspell pin.
 Spellcheck fixtures include a `run` step without `uses`, exercising the type
@@ -103,7 +107,7 @@ abbreviated in the table as follows:
 
 | Original location                     | Mutation replayed                             | Test that failed                                                                    |
 | ------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `test/ActionPins.ts:31,39`            | Delete either action-name array element (2)   | `WorkflowGuardSuite.ts::guarded actions include checkout and cspell-action`         |
+| `test/ActionPins.ts:31,39`            | Delete either action-name array element (2)   | `ActionPins.ts::guarded actions include checkout and cspell-action`                 |
 | `test/ActionPins.ts:57`               | Fallback false to true                        | action-negative                                                                     |
 | `test/ActionPins.ts:57`               | Return undefined                              | checkout-positive                                                                   |
 | `test/ActionPins.ts:62`               | Return undefined                              | checkout-positive                                                                   |
@@ -131,16 +135,19 @@ abbreviated in the table as follows:
 | `test/SpellcheckWorkflow.ts:134`      | Delete uses property or make it shorthand (2) | inputs-negative                                                                     |
 | `test/SpellcheckWorkflow.ts:135`      | Delete with property                          | inputs-negative                                                                     |
 | `test/SpellcheckWorkflow.ts:140`      | Delete final uses property                    | inputs-negative                                                                     |
-| `test/WorkflowGuardSuite.ts:20`       | Delete pin assertion                          | R: importing suite rejects a faulty isPinned                                        |
-| `test/WorkflowGuardSuite.ts:21`       | Delete runtime assertion                      | R: importing suite rejects a faulty usesNode20Action                                |
+| `test/ActionPins.ts` (key-set test)   | Delete pin assertion                          | R: guarded-actions test rejects a faulty isPinned                                   |
+| `test/ActionPins.ts` (key-set test)   | Delete runtime assertion                      | R: guarded-actions test rejects a faulty usesNode20Action                           |
 | `test/ActionPins.ts:207` (verifier)   | Force offender condition false                | R: scan collects a node20 cspell offender; scan collects a node20 checkout offender |
 
 ## Test commands
 
-- `deno test --allow-all test/ActionPins.ts test/SpellcheckWorkflow.ts test/WorkflowGuardSuite.ts test/WorkflowGuardRegression_test.ts`
-  passes (51 tests, 17 steps).
-- The mutation replay uses the same four modules with `--no-check`, one edit at
+- `deno test --allow-all test/ActionPins.ts test/SpellcheckWorkflow.ts test/WorkflowGuardRegression_test.ts`
+  passes (22 tests, 17 steps).
+- `deno test --allow-read=".,/tmp" --allow-write=/tmp test/*.ts` (CI
+  permissions) passes (159 passed, 1 ignored: the regression suite).
+- The mutation replay uses the same three modules with `--no-check`, one edit at
   a time, to require runtime test failures rather than type errors.
-- `bash quality.sh` passes (164 tests, 17 steps).
-- `deno lint test/ActionPins.ts test/SpellcheckWorkflow.ts test/WorkflowGuardSuite.ts test/WorkflowGuardRegression_test.ts`
+- `bash quality.sh` was not re-run on this head (run budget); the targeted
+  commands above were.
+- `deno lint test/ActionPins.ts test/SpellcheckWorkflow.ts test/WorkflowGuardRegression_test.ts`
   and `git diff --check` pass.
