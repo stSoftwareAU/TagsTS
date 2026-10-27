@@ -36,7 +36,7 @@ dependency-reviewed. It is now `branches: ["Develop", "milestone/*"]`.
 ## Evidence
 
 - Backend/CI config only; no UI. `./quality.sh < /dev/null`:
-  `ok | 149 passed | 0 failed`.
+  `ok | 152 passed | 0 failed`.
 - The workflow `types` list is unchanged (draft-PR skipping from #110 is
   intact).
 
@@ -45,6 +45,13 @@ dependency-reviewed. It is now `branches: ["Develop", "milestone/*"]`.
 No assertion was removed from an existing test. `test/GitleaksWorkflow.ts` only
 lost the two helper functions (now in `test/support/BranchFilter.ts`, unchanged
 apart from `deno fmt` wrapping the signature); its tests are unchanged and pass.
+
+New tests in `test/BranchFilter.ts` (pin the shared matcher directly):
+
+- "branch filter '**' backtracks and reports no match when the tail never
+  matches"
+- "branch filter literal pattern longer than the branch does not match"
+- "branch filter '*' matches within one path segment only"
 
 New tests in `test/DependencyReviewWorkflow.ts`:
 
@@ -81,5 +88,32 @@ branches; no hits, no doc updated.
 - `test/support/BranchFilter.ts:52` — single `*` stops at `/` —
   `test/DependencyReviewWorkflow.ts::dependency-review pull_request filter does not match unrelated or nested branches`
   — removed the `break`, test went red
+
+## Mutation survivors
+
+`test/support/BranchFilter.ts` is imported by `test/GitleaksWorkflow.ts`,
+`test/DependencyReviewWorkflow.ts` and the new `test/BranchFilter.ts`, so the
+gate's "no test imports this module" is wrong for it. Each listed mutation was
+applied by hand and run with `deno test`; all were already killed except three,
+fixed here:
+
+- `:33` `textIndex < text.length` (now removed): the operand was dead —
+  `text[textIndex]` is `undefined` past the end and never equals a pattern
+  character — so the line is simplified to the equality check alone; replacing
+  that equality with `true` turns the tests red.
+- `:41` negated `if` in the `**` loop and `:45` `return false` → `true`:
+  `test/BranchFilter.ts` "branch filter '**' backtracks and reports no match
+  when the tail never matches" goes red for each (verified).
+
+Remaining entries are in leaf test files that nothing imports, so the harness
+cannot observe a mutation of them; run directly they do go red.
+
+- `test/DependencyReviewWorkflow.ts:15` exempt (untestable): deleted `parse`
+  call inside a test body; no module imports the file
+- `test/DependencyReviewWorkflow.ts:40` exempt (untestable): the `false`
+  expected value of an assertion inside a test body; no module imports the file
+- `test/DependencyReviewWorkflow.ts:52`, `:53`, `:54`, `:55` exempt
+  (untestable): elements of the expected `types` array inside a test body; no
+  module imports the file
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

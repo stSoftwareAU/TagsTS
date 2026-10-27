@@ -30,7 +30,6 @@ function globMatch(
 
   if (pattern[patternIndex] !== "*") {
     return (
-      textIndex < text.length &&
       text[textIndex] === pattern[patternIndex] &&
       globMatch(text, textIndex + 1, pattern, patternIndex + 1)
     );
