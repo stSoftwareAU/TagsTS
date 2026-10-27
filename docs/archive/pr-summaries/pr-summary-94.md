@@ -59,17 +59,52 @@ Every PR, including milestone sub-issue PRs, must be checked by ShellCheck.
   `tools/BranchFilter.ts` and the private copy is deleted, so there is one
   matcher. Its helper-semantics test stays and now exercises the shared module.
 
-<!-- vibe-branch-outcomes -->
+**Branch outcomes:**
+
+- `.github/workflows/shellcheck.yml:10` — the `"milestone/*"` filter entry is
+  dropped, so a PR based on `milestone/<slug>` no longer triggers ShellCheck.
+  Goes red in `test/ShellCheckWorkflow.ts` ("shellcheck workflow runs on PRs
+  targeting Develop, main and milestone branches"); flip: dropped the entry, the
+  test went red.
+- `tools/BranchFilter.ts:15` — any listed pattern matching is enough. Goes red
+  in `test/BranchFilter.ts` ("branch filter: any listed pattern may match");
+  flip: `some` changed to `every`, the test went red.
+- `tools/BranchFilter.ts:24` — the pattern is exhausted, so the text must be
+  exhausted too. Goes red in `test/BranchFilter.ts` ("branch filter: literal
+  patterns match exactly"); flip: inverted the condition, the test went red.
+- `tools/BranchFilter.ts:25` — error outcome: text left over after the pattern
+  ends. Goes red in `test/BranchFilter.ts` ("branch filter: literal patterns
+  match exactly"); flip: returned `true`, the test went red.
+- `tools/BranchFilter.ts:28` — literal character branch. Goes red in
+  `test/BranchFilter.ts` ("branch filter: literal patterns match exactly");
+  flip: inverted the condition, the test went red.
+- `tools/BranchFilter.ts:30` — exempt (untestable): the
+  `textIndex < text.length` bounds guard is redundant, because `text[textIndex]`
+  is `undefined` past the end and never equals a pattern character, so no input
+  can distinguish the two (searched `test/BranchFilter.ts`, which cannot stage a
+  differing input).
+- `tools/BranchFilter.ts:36` — the `**` branch crosses slashes. Goes red in
+  `test/BranchFilter.ts` ("branch filter: a double star crosses slashes"); flip:
+  inverted the condition, the test went red.
+- `tools/BranchFilter.ts:38` — exempt (untestable): `patternIndex + 2` against
+  `+ 1` is an equivalent mutant, because the `**` loop already tries every start
+  position, so a following `*` cannot change the result (searched
+  `test/BranchFilter.ts`, which cannot stage a differing input).
+- `tools/BranchFilter.ts:45` — absent outcome: `*` at the end of the text. Goes
+  red in `test/BranchFilter.ts` ("branch filter: a single star stops at a
+  slash"); flip: changed `<=` to `<`, the test went red.
+- `tools/BranchFilter.ts:49` — `*` stops at a slash. Goes red in
+  `test/BranchFilter.ts` ("branch filter: a single star stops at a slash");
+  flip: deleted the `break` and inverted it, the test went red.
 
 ## Mutation check
 
 The matcher that was in `test/ShellCheckWorkflow.ts` (lines 23-76) moved to
 `tools/BranchFilter.ts`, and `test/BranchFilter.ts` imports it and pins every
 branch, so the mutants reported there are killed, except the two equivalent
-mutants recorded as exemptions in
-`docs/archive/pr-summaries/pr-summary-94.facts.json`. Two reported lines are
-assertions inside a test body, and no other test can import a test file without
-registering its tests:
+mutants exempted in the Branch outcomes list (`tools/BranchFilter.ts:30` and
+`:38`). Two reported lines are assertions inside a test body, and no other test
+can import a test file without registering its tests:
 
 - `test/ShellCheckWorkflow.ts:82` (was :148) exempt (untestable): this is the
   `Array.isArray` assertion inside the test body; deleting it only removes a

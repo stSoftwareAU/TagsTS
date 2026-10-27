@@ -5,7 +5,7 @@
     "entries": [
       {
         "path": ".github/workflows/shellcheck.yml",
-        "line": 7,
+        "line": 10,
         "outcome": "the \"milestone/*\" filter entry is dropped, so a PR based on milestone/<slug> no longer triggers ShellCheck",
         "test": "test/ShellCheckWorkflow.ts",
         "testName": "shellcheck workflow runs on PRs targeting Develop, main and milestone branches",
