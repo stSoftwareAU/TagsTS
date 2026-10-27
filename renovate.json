@@ -11,6 +11,15 @@
         "npm\\s+(?:install|i|add)\\s+(?:(?:-g|--global)\\s+)?(?<depName>(?:@[a-z0-9-][a-z0-9-._]*/)?[a-z0-9-][a-z0-9-._]*)@(?<currentValue>\\d+\\.\\d+\\.\\d+)(?:[^\\w.-]|$)"
       ],
       "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "Issue #102: Renovate's github-actions manager does not parse `run:` shell, so the actionlint docker image pin in a run step is tracked here; match it so version and digest bumps are proposed through minimumReleaseAge like every other dependency.",
+      "managerFilePatterns": ["/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      "matchStrings": [
+        "(?<depName>rhysd/actionlint):(?<currentValue>\\d+\\.\\d+\\.\\d+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [

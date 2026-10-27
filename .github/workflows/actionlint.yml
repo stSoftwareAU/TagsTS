@@ -23,7 +23,8 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      # rhysd/actionlint:1.7.12 (bundles shellcheck), pinned to its image digest.
+      # rhysd/actionlint:1.7.12 (bundles shellcheck), pinned as tag@digest. The tag
+      # lets the regex customManager in renovate.json propose version and digest bumps.
       # Run from a `run:` step rather than `uses: docker://…`: the repo's
       # Actions allowlist rejects docker:// references (they can never be
       # pinned to a commit SHA), which made the job a silent startup_failure.
@@ -31,5 +32,5 @@ jobs:
         run: |
           set -euo pipefail
           docker run --rm -v "$GITHUB_WORKSPACE:/repo" -w /repo \
-            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
             -color

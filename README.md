@@ -192,7 +192,10 @@ Tools that CI installs from a workflow `run:` step (such as
 pinned to an exact version instead. `renovate.json` has a regex `customManagers`
 entry that finds those pins and bumps them, with a top-level `minimumReleaseAge`
 of 24 hours. That gives them the same quarantine. Renovate's `deno` manager is
-disabled, so it does not overlap with `minimumDependencyAge`.
+disabled, so it does not overlap with `minimumDependencyAge`. A second regex
+entry tracks the `rhysd/actionlint:X.Y.Z@sha256:<digest>` image pin in
+`.github/workflows/actionlint.yml` through Renovate's docker datasource, because
+Renovate's github-actions manager does not parse `run:` shell.
 
 ### Workflow lint
 
