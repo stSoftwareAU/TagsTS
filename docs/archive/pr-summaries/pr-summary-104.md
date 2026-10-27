@@ -98,8 +98,8 @@ and neither file does. `test/ActionPins_test.ts`
 default discovery.
 
 Before the merge, each mutation was applied in a scratch copy and run with
-`deno test -A --no-check` (default discovery). Line numbers below refer to
-the pre-merge files:
+`deno test -A --no-check` (default discovery). Line numbers below refer to the
+pre-merge files:
 
 - `test/ActionPins.ts:273`, `:274` operands forced true (and `:274` forced
   false) → red (1, 4 and 5 failed)
@@ -143,10 +143,11 @@ hits, so no doc updated.
 Merged `Develop` while retaining the cspell pin and guards above. The base's
 shared `usesRefs` implementation in `tools/GhReleasePins.ts` now serves the
 cspell scanner too; the gh-release guard and its documentation remain intact.
-The package version remains 1.0.38 from `Develop`, avoiding a rollback to the
-PR branch's 1.0.37. No package-version change remains in this PR's diff.
+The package version remains 1.0.38 from `Develop`, avoiding a rollback to the PR
+branch's 1.0.37. No package-version change remains in this PR's diff.
 
-Merge validation: `deno test --allow-all test/ActionPinsScan.ts
-test/GhReleasePinsScan.ts test/SpellcheckWorkflow.ts < /dev/null` passed
-(41 tests, 0 failures), including the cspell scanner using the shared helper.
-The full quality gate is left to CI for this merge.
+Merge validation:
+`deno test --allow-all test/ActionPinsScan.ts
+test/GhReleasePinsScan.ts test/SpellcheckWorkflow.ts < /dev/null`
+passed (41 tests, 0 failures), including the cspell scanner using the shared
+helper. The full quality gate is left to CI for this merge.
