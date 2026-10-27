@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "branchOutcomes": {
+    "noneAdded": false,
+    "entries": [
+      {
+        "path": ".github/workflows/shellcheck.yml",
+        "line": 10,
+        "outcome": "the \"milestone/*\" filter entry is dropped, so a PR based on milestone/<slug> no longer triggers ShellCheck",
+        "test": "test/ShellCheckWorkflow.ts",
+        "testName": "shellcheck workflow runs on PRs targeting Develop, main and milestone branches",
+        "flipWentRed": "dropped the entry, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 15,
+        "outcome": "any listed pattern matching is enough",
+        "test": "test/BranchFilter.ts",
+        "testName": "branch filter: any listed pattern may match",
+        "flipWentRed": "flipped some to every, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 24,
+        "outcome": "pattern exhausted, so the text must be exhausted too",
+        "test": "test/BranchFilter.ts",
+        "testName": "branch filter: literal patterns match exactly",
+        "flipWentRed": "inverted the condition, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 25,
+        "outcome": "error: text left over after the pattern ends",
+        "test": "test/BranchFilter.ts",
+        "testName": "branch filter: literal patterns match exactly",
+        "flipWentRed": "returned true, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 28,
+        "outcome": "literal character branch",
+        "test": "test/BranchFilter.ts",
+        "testName": "branch filter: literal patterns match exactly",
+        "flipWentRed": "inverted the condition, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 36,
+        "outcome": "** branch crosses slashes",
+        "test": "test/BranchFilter.ts",
+        "testName": "branch filter: a double star crosses slashes",
+        "flipWentRed": "inverted the condition, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 49,
+        "outcome": "* stops at a slash",
+        "test": "test/BranchFilter.ts",
+        "testName": "branch filter: a single star stops at a slash",
+        "flipWentRed": "deleted the break and inverted it, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 45,
+        "outcome": "absent: * at the end of the text",
+        "test": "test/BranchFilter.ts",
+        "testName": "branch filter: a single star stops at a slash",
+        "flipWentRed": "changed <= to <, test went red"
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 30,
+        "outcome": "equivalent mutant",
+        "exempt": {
+          "kind": "untestable",
+          "reason": "the textIndex < text.length bounds guard is redundant, because text[textIndex] is undefined past the end and never equals a pattern character, so no input can distinguish the two (searched test/BranchFilter.ts)"
+        }
+      },
+      {
+        "path": "tools/BranchFilter.ts",
+        "line": 38,
+        "outcome": "equivalent mutant",
+        "exempt": {
+          "kind": "untestable",
+          "reason": "patternIndex + 2 against + 1 is an equivalent mutant, because the ** loop already tries every start position, so a following * cannot change the result (searched test/BranchFilter.ts)"
+        }
+      }
+    ]
+  }
+}

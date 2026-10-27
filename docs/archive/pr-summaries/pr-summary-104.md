@@ -12,7 +12,7 @@ GitHub removed on 2026-09-16. It is now pinned to
 - [x] Add a node20 denylist guard to `test/ActionPins.ts` (`NODE20_CSPELL_SHAS`,
       `usesNode20Cspell`, `scanCspell`) with positive, negative, fixture and
       real-workflow tests
-- [x] Add `test/ActionPins_test.ts`, a one-line entry point importing
+- [x] Add `test/ActionPins_test.ts`, an entry point importing
       `test/ActionPinsScan.ts`, so default `deno test` discovery (`*_test.ts`)
       reaches the guard tests and the mutation gate sees a test that imports the
       changed modules
@@ -72,7 +72,7 @@ Checked with `gh api` on 2026-10-27:
   SHA", "usesNode20Cspell accepts node24 v9.2.0 and unrelated actions",
   "scanCspell lists a node20 pin and counts every reference", "no workflow pins
   streetsidesoftware/cspell-action to a node20 runtime release". Only the header
-  comment of this file was edited; no existing assertion was removed.
+  comment of the existing code was edited; no existing assertion was removed.
 - Added to `test/ActionPinsScan.ts`: five `scanCspell` tests (empty list,
   aggregation across files, job-level reference, same SHA under another action,
   v7.2.1 label). The import line gained `scanCspell`; no assertion was removed.
@@ -97,8 +97,9 @@ and neither file does. `test/ActionPins_test.ts`
 (`import "./ActionPinsScan.ts";`) now registers the tests of both modules under
 default discovery.
 
-Each mutation was applied in a scratch copy and run with
-`deno test -A --no-check` (default discovery):
+Before the merge, each mutation was applied in a scratch copy and run with
+`deno test -A --no-check` (default discovery). Line numbers below refer to
+the pre-merge files:
 
 - `test/ActionPins.ts:273`, `:274` operands forced true (and `:274` forced
   false) → red (1, 4 and 5 failed)
@@ -136,3 +137,16 @@ body leaves that test passing and no other assertion observes it:
 section: none documents the action pin; siblings: the `actions/checkout` and
 `actions/dependency-review-action` guards in `test/ActionPins.ts`, unchanged. No
 hits, so no doc updated.
+
+## Merge resolution
+
+Merged `Develop` while retaining the cspell pin and guards above. The base's
+shared `usesRefs` implementation in `tools/GhReleasePins.ts` now serves the
+cspell scanner too; the gh-release guard and its documentation remain intact.
+The package version remains 1.0.38 from `Develop`, avoiding a rollback to the
+PR branch's 1.0.37. No package-version change remains in this PR's diff.
+
+Merge validation: `deno test --allow-all test/ActionPinsScan.ts
+test/GhReleasePinsScan.ts test/SpellcheckWorkflow.ts < /dev/null` passed
+(41 tests, 0 failures), including the cspell scanner using the shared helper.
+The full quality gate is left to CI for this merge.
