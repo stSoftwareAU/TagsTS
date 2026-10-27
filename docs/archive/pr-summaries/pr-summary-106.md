@@ -164,20 +164,27 @@ file is unchanged since; only its module doc comment changed).
 
 <!-- vibe-branch-outcomes -->
 
-**Mutation check:** the gate reported 40 survivors in `test/GhReleasePins.ts`
-and `tools/GhReleasePins.ts`, all "no test imports this module". The cause was
-that `test/GhReleasePinsScan.ts` used a bare side-effect
-`import
-"./GhReleasePins.ts"` and never imported `tools/GhReleasePins.ts`, so
-the gate found no test importing either module. It now imports named bindings
-from both and tests them directly (the `test/ActionPinsScan.ts` shape).
-Red-checks on the head, each break applied then restored, run against
-`test/GhReleasePinsScan.ts` alone: `if (checked === 0)` forced to `false`, the
-`checked++` removed, the `offenders.push(...result.offenders)` removed, and the
-`texts.set` removed all turn it red. I could not run the worker's mutation gate
-here, so its verdict on the new layout is not observed; no line is recorded as
-exempt. An earlier attempt (PR #114, closed) was reviewed once; its only
-finding, a size assertion on the denylist, is fixed as above.
+**Mutation check:** the gate reported 40 survivors, all "no test imports this
+module", in `test/GhReleasePins.ts` (lines 20-149) and `test/GhReleasePinsScan.ts`
+(lines 38-62). `test/GhReleasePinsScan.ts` imported `test/GhReleasePins.ts` and
+`tools/GhReleasePins.ts` through multi-line named imports, which the gate's
+importer lookup evidently did not recognise (`test/ActionPinsScan.ts`, which
+passed in #105, uses a one-line import). Both imports are now one-line
+namespace imports (`import * as pins from "./GhReleasePins.ts"` and
+`import * as tools from "../tools/GhReleasePins.ts"`), so
+`test/GhReleasePinsScan.ts` is a test that imports both modules, runs the guard
+tests of `test/GhReleasePins.ts` as a side effect, and tests the tools module
+directly. Checked on the head: with `test/GhReleasePins.ts` mutated (a negative
+`false` expectation swapped to `true`, and the `workflowFiles` return removed),
+`deno test test/GhReleasePinsScan.ts` alone goes red (5 tests failed). The four
+test files pass (48 passed, 0 failed). I could not run the worker's mutation
+gate here, so its verdict on the new import form is not observed.
+
+exempt (untestable): `test/GhReleasePinsScan.ts:38`, `:39`, `:40`, `:45`, `:50`,
+`:58`, `:62` — mutations of assertion lines in a top-level test entry file;
+no other test imports `test/GhReleasePinsScan.ts`, so none can observe them (the
+same limit `docs/archive/pr-summaries/pr-summary-105.md` records for
+`test/ActionPinsScan.ts`). Each assertion is exercised by the file's own run.
 
 **Pre-PR verifier:** the finding on `test/GhReleasePinsScan.ts:11` (the version
 comment assertion pinned `# v3.x.y`) is fixed: the regex is now

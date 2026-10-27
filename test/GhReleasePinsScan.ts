@@ -4,20 +4,8 @@
 // changed line in it, or in tools/GhReleasePins.ts, turns a test in this file
 // red.
 import { assert, assertEquals } from "@std/assert";
-import {
-  FIXTURE_NODE20,
-  FIXTURE_NODE24,
-  workflowFiles,
-} from "./GhReleasePins.ts";
-import {
-  ghReleaseScanProblems,
-  NODE20_GH_RELEASE_SHAS,
-  readWorkflowTexts,
-  scanGhRelease,
-  scanGhReleaseFiles,
-  usesNode20GhRelease,
-  usesRefs,
-} from "../tools/GhReleasePins.ts";
+import * as pins from "./GhReleasePins.ts";
+import * as tools from "../tools/GhReleasePins.ts";
 
 const NODE20 = "softprops/action-gh-release@" +
   "3bb12739c298aeb8a4eeaf626c5b8d85266b0e65";
@@ -35,18 +23,18 @@ Deno.test("github-release.yml keeps a SHA pin with a version comment", async () 
 });
 
 Deno.test("usesNode20GhRelease is true only for the action on a denylisted SHA", () => {
-  assertEquals(usesNode20GhRelease(NODE20), true);
-  assertEquals(usesNode20GhRelease(NODE24), false);
-  assertEquals(usesNode20GhRelease("softprops/action-gh-release"), false);
+  assertEquals(tools.usesNode20GhRelease(NODE20), true);
+  assertEquals(tools.usesNode20GhRelease(NODE24), false);
+  assertEquals(tools.usesNode20GhRelease("softprops/action-gh-release"), false);
   assertEquals(
-    usesNode20GhRelease(
+    tools.usesNode20GhRelease(
       "other/action@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65",
     ),
     false,
   );
-  for (const sha of NODE20_GH_RELEASE_SHAS.keys()) {
+  for (const sha of tools.NODE20_GH_RELEASE_SHAS.keys()) {
     assertEquals(
-      usesNode20GhRelease(`softprops/action-gh-release@${sha}`),
+      tools.usesNode20GhRelease(`softprops/action-gh-release@${sha}`),
       true,
     );
   }
@@ -54,12 +42,12 @@ Deno.test("usesNode20GhRelease is true only for the action on a denylisted SHA",
 
 Deno.test("usesRefs lists job-level then step-level uses", () => {
   assertEquals(
-    usesRefs({
+    tools.usesRefs({
       jobs: { a: { uses: "x/y@1", steps: [{ uses: "p/q@2" }, { run: "z" }] } },
     }),
     ["x/y@1", "p/q@2"],
   );
-  assertEquals(usesRefs(undefined), []);
+  assertEquals(tools.usesRefs(undefined), []);
 });
 
 Deno.test("scanGhRelease counts every gh-release ref and flags node20 ones", () => {
@@ -68,11 +56,11 @@ Deno.test("scanGhRelease counts every gh-release ref and flags node20 ones", () 
       a: { steps: [{ uses: NODE20 }, { uses: NODE24 }, { uses: "o/r@1" }] },
     },
   };
-  assertEquals(scanGhRelease("w.yml", doc), {
+  assertEquals(tools.scanGhRelease("w.yml", doc), {
     checked: 2,
     offenders: [`w.yml: ${NODE20} (v2.6.2)`],
   });
-  assertEquals(scanGhRelease("w.yml", { jobs: { a: { steps: [] } } }), {
+  assertEquals(tools.scanGhRelease("w.yml", { jobs: { a: { steps: [] } } }), {
     checked: 0,
     offenders: [],
   });
@@ -80,35 +68,38 @@ Deno.test("scanGhRelease counts every gh-release ref and flags node20 ones", () 
 
 Deno.test("scanGhReleaseFiles sums counts and offenders across files", () => {
   assertEquals(
-    scanGhReleaseFiles(
-      new Map([["a.yml", FIXTURE_NODE20], ["b.yml", FIXTURE_NODE24]]),
+    tools.scanGhReleaseFiles(
+      new Map([["a.yml", pins.FIXTURE_NODE20], ["b.yml", pins.FIXTURE_NODE24]]),
     ),
     { checked: 2, offenders: [`a.yml: ${NODE20} (v2.6.2)`] },
   );
-  assertEquals(scanGhReleaseFiles(new Map()), { checked: 0, offenders: [] });
+  assertEquals(tools.scanGhReleaseFiles(new Map()), {
+    checked: 0,
+    offenders: [],
+  });
 });
 
 Deno.test("ghReleaseScanProblems puts the vacuity problem before offenders", () => {
-  assertEquals(ghReleaseScanProblems(new Map()), [
+  assertEquals(tools.ghReleaseScanProblems(new Map()), [
     "no softprops/action-gh-release references found; scan is vacuous",
   ]);
   assertEquals(
-    ghReleaseScanProblems(new Map([["b.yml", FIXTURE_NODE24]])),
+    tools.ghReleaseScanProblems(new Map([["b.yml", pins.FIXTURE_NODE24]])),
     [],
   );
   assertEquals(
-    ghReleaseScanProblems(new Map([["a.yml", FIXTURE_NODE20]])),
+    tools.ghReleaseScanProblems(new Map([["a.yml", pins.FIXTURE_NODE20]])),
     [`a.yml: ${NODE20} (v2.6.2)`],
   );
 });
 
 Deno.test("workflowFiles lists sorted workflow paths and readWorkflowTexts reads them", async () => {
-  const files = await workflowFiles();
+  const files = await pins.workflowFiles();
   assert(files.length > 0);
   assertEquals(files, [...files].sort());
   assert(files.every((f) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(f)));
   assert(files.includes(".github/workflows/github-release.yml"));
-  const texts = await readWorkflowTexts(files);
+  const texts = await tools.readWorkflowTexts(files);
   assertEquals([...texts.keys()], files);
   assertEquals(
     texts.get(".github/workflows/github-release.yml"),
@@ -123,7 +114,10 @@ Deno.test("workflowFiles keeps only yaml files, not directories or other files",
     await Deno.writeTextFile(`${dir}/a.yaml`, "");
     await Deno.writeTextFile(`${dir}/c.txt`, "");
     await Deno.mkdir(`${dir}/d.yml`);
-    assertEquals(await workflowFiles(dir), [`${dir}/a.yaml`, `${dir}/b.yml`]);
+    assertEquals(await pins.workflowFiles(dir), [
+      `${dir}/a.yaml`,
+      `${dir}/b.yml`,
+    ]);
   } finally {
     await Deno.remove(dir, { recursive: true });
   }
