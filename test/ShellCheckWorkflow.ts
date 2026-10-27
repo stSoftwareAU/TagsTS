@@ -1,7 +1,13 @@
 // Verifies the ShellCheck GitHub Actions workflow file exists and is
 // well-formed YAML. Tracked in issues #20 and #63.
+//
+// Also verifies the pull_request filter runs on PRs targeting milestone
+// sub-issue branches. In GitHub Actions filter globs "*" does not match
+// "/", so branches: ["*"] silently excludes "milestone/<slug>" PRs. Tracked
+// in issue #94.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
+import { matchesBranchFilter } from "../tools/BranchFilter.ts";
 
 const WORKFLOW_PATH = ".github/workflows/shellcheck.yml";
 
@@ -65,4 +71,32 @@ Deno.test("shellcheck workflow checks out without persisted credentials", async 
     // deno-lint-ignore no-explicit-any
     assertEquals((checkout.with as any)?.["persist-credentials"], false);
   }
+});
+
+Deno.test("shellcheck workflow runs on PRs targeting Develop, main and milestone branches", async () => {
+  const text = await Deno.readTextFile(WORKFLOW_PATH);
+  // deno-lint-ignore no-explicit-any
+  const doc = parse(text) as any;
+
+  const branches = doc.on.pull_request.branches;
+  assert(Array.isArray(branches), "on.pull_request.branches must be an array");
+  for (const branch of branches) {
+    assert(
+      typeof branch === "string",
+      "on.pull_request.branches entries must be strings",
+    );
+  }
+
+  for (const branch of ["Develop", "main", "milestone/issue-94-slug"]) {
+    assert(
+      matchesBranchFilter(branch, branches),
+      `expected branch '${branch}' to match the pull_request filter`,
+    );
+  }
+
+  assertEquals(
+    matchesBranchFilter("milestone/issue-94-slug", ["*"]),
+    false,
+    'a bare ["*"] filter must not match milestone/<slug> branches',
+  );
 });
