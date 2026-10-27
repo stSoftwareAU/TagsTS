@@ -2,7 +2,7 @@
 // milestone/<slug> branches, not just Develop. Tracked in issue #96.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
-import { matchesBranchFilter } from "./support/BranchFilter.ts";
+import { matchesBranchFilter } from "../tools/BranchFilter.ts";
 
 const WORKFLOW_PATH = ".github/workflows/dependency-review.yml";
 

@@ -5,7 +5,9 @@ on:
     # Draft PRs are work in progress (owner, 2026-10-23): CI runs
     # once, when the PR is marked ready.
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: ["*"]
+    # "*" does not match "/", so milestone/* is listed explicitly to
+    # ensure milestone sub-issue PRs are checked (Issue #94).
+    branches: ["*", "milestone/*"]
   push:
     branches: [main, master, Develop]
 

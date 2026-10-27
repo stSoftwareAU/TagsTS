@@ -11,7 +11,7 @@
 // .git/config. Tracked in issue #71.
 import { assert, assertEquals } from "@std/assert";
 import { parse } from "@std/yaml";
-import { matchesBranchFilter } from "./support/BranchFilter.ts";
+import { matchesBranchFilter } from "../tools/BranchFilter.ts";
 
 const WORKFLOW_PATH = ".github/workflows/gitleaks.yml";
 
