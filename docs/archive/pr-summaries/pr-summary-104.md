@@ -12,6 +12,10 @@ GitHub removed on 2026-09-16. It is now pinned to
 - [x] Add a node20 denylist guard to `test/ActionPins.ts` (`NODE20_CSPELL_SHAS`,
       `usesNode20Cspell`, `scanCspell`) with positive, negative, fixture and
       real-workflow tests
+- [x] Add `test/ActionPins_test.ts`, a one-line entry point importing
+      `test/ActionPinsScan.ts`, so default `deno test` discovery (`*_test.ts`)
+      reaches the guard tests and the mutation gate sees a test that imports
+      the changed modules
 - [x] Test `scanCspell` directly from `test/ActionPinsScan.ts`, which imports
       `test/ActionPins.ts`, so the worker's mutation gate sees a test importing
       the changed module
@@ -83,6 +87,47 @@ Checked with `gh api` on 2026-10-27:
   passed, 0 failed. `deno fmt` and `deno lint test/`: clean.
 - `./quality.sh < /dev/null` on the final test and workflow files: exit 0, 159
   passed, 0 failed.
+
+## Mutation check
+
+Required item 1 reported 27 surviving mutants of changed lines in
+`test/ActionPins.ts` and `test/ActionPinsScan.ts`, all annotated "no test
+imports this module": default `deno test` discovery only matches `*_test.ts`,
+and neither file does. `test/ActionPins_test.ts` (`import "./ActionPinsScan.ts";`)
+now registers the tests of both modules under default discovery.
+
+Each mutation was applied in a scratch copy and run with
+`deno test -A --no-check` (default discovery):
+
+- `test/ActionPins.ts:273`, `:274` operands forced true (and `:274` forced
+  false) → red (1, 4 and 5 failed)
+- `:286` and `:289` negated → red (5 failed); `:290` deleted → red (4 failed)
+- `:294` return replaced with undefined → red (7 failed)
+- `:308`, `:314`, `:320`, `:326` expected `false` swapped to `true` → red
+  (1 failed each)
+- `:340`, `:341`, `:344`, `:345` object property deleted → red (1 failed each)
+- `test/ActionPinsScan.ts:53`, `:54`, `:63`, `:64`, `:73`, `:74` object property
+  deleted → red (1 failed each); `:83` expected array element changed → red
+  (1 failed)
+- `test/ActionPinsScan.ts:46` `checked` property: covered by the same
+  `scanCspell` empty-list assertion's other properties and `:53`/`:63` results.
+
+Exempt (untestable), because deleting the only assertion statement of a test
+body leaves that test passing and no other assertion observes it:
+
+- `test/ActionPins.ts:299` exempt (untestable): the `assert(usesNode20Cspell(…))`
+  call is the sole statement of the denylist loop; the same SHAs are also
+  checked through `scanCspell` in the `:340` and `ActionPinsScan.ts:63`/`:83`
+  tests, which do go red when the classifier is broken
+- `test/ActionPins.ts:328` exempt (untestable): the local-action
+  `assertEquals(…, false)` is a test-body statement; no other test observes its
+  deletion
+- `test/ActionPinsScan.ts:46` exempt (untestable): the empty-list
+  `assertEquals` call is a test-body statement; deleting it leaves the test
+  passing (its expected object is red-checked via the `scanCspell` results above)
+- `test/ActionPins.ts:274` "deleted call statement" is the `.has(…)` operand of
+  a return expression; deleting it is a syntax error, and replacing it with
+  `true` or `false` is red as listed above
 
 **Docs sweep** — grep: `node20`, `cspell-action`, `spellcheck` over `README.md`,
 `CONTRIBUTING.md`, `SECURITY.md` and `docs/` (excluding `docs/archive/`);
