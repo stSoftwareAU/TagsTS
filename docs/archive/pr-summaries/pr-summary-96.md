@@ -78,7 +78,7 @@ branches; no hits, no doc updated.
   unrelated branches —
   `test/DependencyReviewWorkflow.ts::dependency-review pull_request filter does not match unrelated or nested branches`
   — flipped to `"**"`, test went red
-- `test/support/BranchFilter.ts:45` — single `*` stops at `/` —
+- `test/support/BranchFilter.ts:52` — single `*` stops at `/` —
   `test/DependencyReviewWorkflow.ts::dependency-review pull_request filter does not match unrelated or nested branches`
   — removed the `break`, test went red
 
