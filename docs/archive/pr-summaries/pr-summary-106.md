@@ -165,12 +165,13 @@ file is unchanged since; only its module doc comment changed).
 <!-- vibe-branch-outcomes -->
 
 **Mutation check:** the gate reported 40 survivors, all "no test imports this
-module", in `test/GhReleasePins.ts` (lines 20-149) and `test/GhReleasePinsScan.ts`
-(lines 38-62). `test/GhReleasePinsScan.ts` imported `test/GhReleasePins.ts` and
-`tools/GhReleasePins.ts` through multi-line named imports, which the gate's
-importer lookup evidently did not recognise (`test/ActionPinsScan.ts`, which
-passed in #105, uses a one-line import). Both imports are now one-line
-namespace imports (`import * as pins from "./GhReleasePins.ts"` and
+module", in `test/GhReleasePins.ts` (lines 20-149) and
+`test/GhReleasePinsScan.ts` (lines 38-62). `test/GhReleasePinsScan.ts` imported
+`test/GhReleasePins.ts` and `tools/GhReleasePins.ts` through multi-line named
+imports, which the gate's importer lookup evidently did not recognise
+(`test/ActionPinsScan.ts`, which passed in #105, uses a one-line import). Both
+imports are now one-line namespace imports
+(`import * as pins from "./GhReleasePins.ts"` and
 `import * as tools from "../tools/GhReleasePins.ts"`), so
 `test/GhReleasePinsScan.ts` is a test that imports both modules, runs the guard
 tests of `test/GhReleasePins.ts` as a side effect, and tests the tools module
@@ -181,8 +182,8 @@ test files pass (48 passed, 0 failed). I could not run the worker's mutation
 gate here, so its verdict on the new import form is not observed.
 
 exempt (untestable): `test/GhReleasePinsScan.ts:38`, `:39`, `:40`, `:45`, `:50`,
-`:58`, `:62` — mutations of assertion lines in a top-level test entry file;
-no other test imports `test/GhReleasePinsScan.ts`, so none can observe them (the
+`:58`, `:62` — mutations of assertion lines in a top-level test entry file; no
+other test imports `test/GhReleasePinsScan.ts`, so none can observe them (the
 same limit `docs/archive/pr-summaries/pr-summary-105.md` records for
 `test/ActionPinsScan.ts`). Each assertion is exercised by the file's own run.
 
