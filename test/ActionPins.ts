@@ -3,7 +3,8 @@
 // mutable tag or branch (CWE-494). Tracked in issue #39. Also guards against
 // actions/checkout releases that run on the deprecated node20 Actions
 // runtime, which GitHub removed on 2026-09-16 (issue #72), and
-// actions/dependency-review-action v4.x releases on node20 (issue #105).
+// actions/dependency-review-action v4.x releases on node20 (issue #105), and
+// streetsidesoftware/cspell-action v6.x releases on node20 (issue #104).
 // The softprops/action-gh-release node20 guard (issue #106) is in
 // test/GhReleasePins.ts.
 import { assert, assertEquals } from "@std/assert";
@@ -244,5 +245,103 @@ Deno.test("no workflow pins actions/dependency-review-action to a node20 runtime
     offenders,
     [],
     "actions/dependency-review-action must be on a node24 release, e.g. v5.0.0",
+  );
+});
+
+/**
+ * streetsidesoftware/cspell-action commit SHAs whose `action.yml` declares
+ * `using: node20` (issue #104). Verified with
+ * `gh api repos/streetsidesoftware/cspell-action/commits/<tag> --jq .sha`.
+ */
+export const NODE20_CSPELL_SHAS: ReadonlyMap<string, string> = new Map([
+  ["e464ae97d348eb3beb0c5a6296dc4388ad4484d9", "v6.11.1"],
+]);
+
+/** True when `uses` pins streetsidesoftware/cspell-action to a node20 release. */
+export function usesNode20Cspell(uses: string): boolean {
+  const [action, ref] = uses.split("@");
+  return action === "streetsidesoftware/cspell-action" &&
+    NODE20_CSPELL_SHAS.has(ref ?? "");
+}
+
+/** Counts cspell-action references and lists node20 offenders. */
+export function scanCspell(
+  docs: ReadonlyArray<readonly [string, unknown]>,
+): { checked: number; offenders: string[] } {
+  let checked = 0;
+  const offenders: string[] = [];
+  for (const [file, doc] of docs) {
+    for (const uses of usesRefs(doc)) {
+      const [action, ref] = uses.split("@");
+      if (action !== "streetsidesoftware/cspell-action") continue;
+      checked++;
+      const tag = NODE20_CSPELL_SHAS.get(ref ?? "");
+      if (usesNode20Cspell(uses)) {
+        offenders.push(`${file}: ${uses} (${tag})`);
+      }
+    }
+  }
+  return { checked, offenders };
+}
+
+Deno.test("usesNode20Cspell flags the known node20 SHA", () => {
+  assert(
+    usesNode20Cspell(
+      "streetsidesoftware/cspell-action@e464ae97d348eb3beb0c5a6296dc4388ad4484d9",
+    ),
+  );
+});
+
+Deno.test("usesNode20Cspell accepts node24 v9.2.0 and unrelated actions", () => {
+  assertEquals(
+    usesNode20Cspell(
+      "streetsidesoftware/cspell-action@ce1816e4ce36532956ac6e983737392774b6e169",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20Cspell(
+      "other/action@e464ae97d348eb3beb0c5a6296dc4388ad4484d9",
+    ),
+    false,
+  );
+  assertEquals(
+    usesNode20Cspell(
+      "actions/checkout@e464ae97d348eb3beb0c5a6296dc4388ad4484d9",
+    ),
+    false,
+  );
+  assertEquals(usesNode20Cspell("./.github/actions/local"), false);
+});
+
+Deno.test("scanCspell lists a node20 pin and counts every reference", () => {
+  const node20 = "streetsidesoftware/cspell-action@" +
+    "e464ae97d348eb3beb0c5a6296dc4388ad4484d9";
+  const node24 = "streetsidesoftware/cspell-action@" +
+    "ce1816e4ce36532956ac6e983737392774b6e169";
+  const doc = parse(
+    `jobs:\n  a:\n    steps:\n      - uses: ${node20}\n      - uses: ${node24}\n      - uses: actions/checkout@v6\n`,
+  );
+  assertEquals(scanCspell([["wf.yml", doc]]), {
+    checked: 2,
+    offenders: [`wf.yml: ${node20} (v6.11.1)`],
+  });
+  assertEquals(scanCspell([["empty.yml", {}]]), {
+    checked: 0,
+    offenders: [],
+  });
+});
+
+Deno.test("no workflow pins streetsidesoftware/cspell-action to a node20 runtime release", async () => {
+  const { checked, offenders } = scanCspell(await loadWorkflowDocs());
+
+  assert(
+    checked > 0,
+    "no streetsidesoftware/cspell-action references found; scan is vacuous",
+  );
+  assertEquals(
+    offenders,
+    [],
+    "streetsidesoftware/cspell-action must be on a node24 release, e.g. v9.2.0",
   );
 });
