@@ -51,5 +51,11 @@ Backend/CI change, no UI. Observed:
   fail (13 passed, 1 failed); with the new pin all pass.
 - `deno test --allow-all test/ActionPins.ts test/SpellcheckWorkflow.ts`: 16
   passed, 0 failed.
+- Mutation check: added `test/CspellPinsScan.ts`, which imports
+  `test/ActionPins.ts` (so its guard tests run under it) and asserts
+  `NODE20_CSPELL_SHAS`, `usesNode20Cspell` and `scanCspell` directly (empty
+  input, cross-file aggregation, other actions ignored, job-level `uses`).
+  `deno test --allow-all test/CspellPinsScan.ts test/ActionPins.ts`: 34 passed,
+  0 failed.
 - Twinned rules: the checkout, dependency-review and gh-release node20 guards
   are siblings; none was changed.
