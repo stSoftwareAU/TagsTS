@@ -4,8 +4,9 @@
 // branches: ["*"] silently excludes "milestone/<slug>" PRs. Tracked in
 // issue #65.
 //
-// Also verifies the workflow pins gitleaks-action to the expected
-// release. Tracked in issue #68.
+// Also verifies the workflow installs the free Gitleaks CLI at a pinned
+// release whose archive is checked against a pinned SHA-256 (it replaced
+// gitleaks-action, which issue #68 pinned).
 //
 // Also verifies the checkout step does not persist the GITHUB_TOKEN into
 // .git/config. Tracked in issue #71.
@@ -38,7 +39,10 @@ Deno.test("gitleaks workflow runs on PRs targeting Develop, main and milestone b
   // deno-lint-ignore no-explicit-any
   const doc = parse(text) as any;
 
+  // No branches filter scans PRs to every target branch, which is the
+  // intended default; a filter, if one is added, must still match these.
   const branches = doc.on.pull_request.branches;
+  if (branches === undefined) return;
   assert(Array.isArray(branches), "on.pull_request.branches must be an array");
   for (const branch of branches) {
     assert(
@@ -56,8 +60,10 @@ Deno.test("gitleaks workflow runs on PRs targeting Develop, main and milestone b
 });
 
 const ACTION = "gitleaks/gitleaks-action";
-const EXPECTED_SHA = "e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e";
-const EXPECTED_TAG = "v3.0.0";
+const EXPECTED_CLI_VERSION = "8.30.1";
+const EXPECTED_CLI_SHA256 =
+  "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb";
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 
@@ -137,22 +143,39 @@ Deno.test("actionPin returns undefined when the action is absent", () => {
   assertEquals(actionPin(text, "some/action"), undefined);
 });
 
-Deno.test("gitleaks workflow pins gitleaks-action to the expected release", async () => {
+Deno.test("gitleaks workflow installs a pinned, checksum-verified Gitleaks CLI", async () => {
   const text = await Deno.readTextFile(WORKFLOW_PATH);
   // deno-lint-ignore no-explicit-any
   const doc = parse(text) as any;
   const steps = doc.jobs.gitleaks.steps as Array<Record<string, unknown>>;
 
-  const step = steps.find((s) =>
-    typeof s.uses === "string" && s.uses.startsWith(`${ACTION}@`)
+  assertEquals(
+    steps.filter((s) =>
+      typeof s.uses === "string" && s.uses.startsWith(`${ACTION}@`)
+    ),
+    [],
+    `${ACTION} needs an organisation licence and must not be used`,
   );
-  assert(step, `${ACTION} step must be present`);
-  assertEquals(step!.uses, `${ACTION}@${EXPECTED_SHA}`);
 
-  assertEquals(actionPin(text, ACTION), {
-    sha: EXPECTED_SHA,
-    comment: EXPECTED_TAG,
-  });
+  const install = steps.find((s) =>
+    typeof s.run === "string" && s.run.includes("sha256sum --check --strict")
+  );
+  assert(install, "a step must verify the Gitleaks archive's SHA-256");
+  const env = install!.env as Record<string, unknown>;
+  assertEquals(env.GITLEAKS_VERSION, EXPECTED_CLI_VERSION);
+  assertEquals(env.GITLEAKS_SHA256, EXPECTED_CLI_SHA256);
+  assert(SHA256_PATTERN.test(String(env.GITLEAKS_SHA256)));
+
+  const scans = steps
+    .map((s) => s.run)
+    .filter((run): run is string =>
+      typeof run === "string" && /\bgitleaks (dir|git)\b/.test(run)
+    );
+  assert(scans.length > 0, "the workflow must run a Gitleaks scan");
+  for (const scan of scans) {
+    assert(scan.includes("--redact=100"), `scan must redact: ${scan}`);
+    assert(scan.includes("--exit-code 1"), `scan must fail on leaks: ${scan}`);
+  }
 });
 
 /**
