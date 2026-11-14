@@ -1,6 +1,6 @@
 {
   "name": "@stsoftware/tags",
-  "version": "1.0.40",
+  "version": "1.0.41",
   "exports": {
     "./mod": "./mod.ts",
     "./App": "./App.ts"
